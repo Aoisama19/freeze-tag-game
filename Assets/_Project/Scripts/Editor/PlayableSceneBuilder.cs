@@ -72,7 +72,22 @@ namespace BarafPaani.EditorTools
             // docs/architecture.md on why input is a request, not an action.
             sync.syncDirection = SyncDirection.ClientToServer;
 
-            root.AddComponent<PlayerMotor>();
+            // Mirror sets these in NetworkTransformBase.Reset(), but Reset runs
+            // during AddComponent and throws before it gets there: it calls
+            // GetPosition() while target is still null. The component is added
+            // regardless, so we apply the defaults it never reached. 20Hz.
+            sync.syncInterval = 0.05f;
+
+            PlayerMotor motor = root.AddComponent<PlayerMotor>();
+            root.AddComponent<PlayerRole>();
+
+            Freezable freezable = root.AddComponent<Freezable>();
+            SerializedObject freezeState = new SerializedObject(freezable);
+            freezeState.FindProperty("_bodyRenderer").objectReferenceValue = body.GetComponent<Renderer>();
+            freezeState.FindProperty("_motor").objectReferenceValue = motor;
+            freezeState.ApplyModifiedPropertiesWithoutUndo();
+
+            root.AddComponent<TagOnContact>();
             PlayerCameraRig rig = root.AddComponent<PlayerCameraRig>();
 
             SerializedObject serialized = new SerializedObject(rig);

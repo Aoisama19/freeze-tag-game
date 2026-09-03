@@ -103,6 +103,9 @@ GameObject:
   - component: {fileID: 6048567038285462511}
   - component: {fileID: 4102716337248104886}
   - component: {fileID: 5973390840868511138}
+  - component: {fileID: 3902200697908445633}
+  - component: {fileID: 5666149522264908578}
+  - component: {fileID: 4883588249623572307}
   - component: {fileID: 41977536852894525}
   m_Layer: 0
   m_Name: Player
@@ -185,7 +188,7 @@ MonoBehaviour:
   syncMethod: 0
   syncDirection: 1
   syncMode: 0
-  syncInterval: 0
+  syncInterval: 0.05
   target: {fileID: 6441582312297703549}
   updateMethod: 0
   syncPosition: 1
@@ -227,6 +230,62 @@ MonoBehaviour:
   _gravity: -19.62
   _jumpHeight: 1.1
   _groundedStick: -2
+--- !u!114 &3902200697908445633
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6002608933944491225}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 571219dc8e08b204688b2316f5a52592, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: BarafPaani::BarafPaani.Gameplay.PlayerRole
+  syncMethod: 0
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+--- !u!114 &5666149522264908578
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6002608933944491225}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4de07e84572d7f14f9fb88acfe77d39e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: BarafPaani::BarafPaani.Gameplay.Freezable
+  syncMethod: 0
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  _bodyRenderer: {fileID: 593180339487453856}
+  _frozenColour: {r: 0.55, g: 0.8, b: 1, a: 1}
+  _motor: {fileID: 5973390840868511138}
+--- !u!114 &4883588249623572307
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6002608933944491225}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aa845f39ae05c8643911503a58cc1e78, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: BarafPaani::BarafPaani.Gameplay.TagOnContact
+  syncMethod: 0
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  _range: 1.2
+  _checkInterval: 0.1
+  _characterMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!114 &41977536852894525
 MonoBehaviour:
   m_ObjectHideFlags: 0

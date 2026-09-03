@@ -1,3 +1,4 @@
+using BarafPaani.Gameplay;
 using Mirror;
 using UnityEngine;
 
@@ -40,6 +41,21 @@ namespace BarafPaani.Core
             ActiveMode = GameMode.Multiplayer;
             maxConnections = _multiplayerMaxConnections;
             StartHost();
+        }
+
+        /// <summary>
+        /// First player into the match is the catcher, everyone after is a runner.
+        /// Placeholder until the menu does real role selection, but it is enough
+        /// to make freeze testable.
+        /// </summary>
+        public override void OnServerAddPlayer(NetworkConnectionToClient conn)
+        {
+            base.OnServerAddPlayer(conn);
+
+            if (conn.identity != null && conn.identity.TryGetComponent(out PlayerRole role))
+            {
+                role.SetRole(numPlayers == 1 ? Role.Catcher : Role.Runner);
+            }
         }
 
         public void JoinMultiplayer(string address)
