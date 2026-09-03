@@ -126,3 +126,25 @@ Two version notes worth keeping in view:
 - **Do not install Mirror from OpenUPM.** That registry is stuck on 96.6.4 from
   May 2025, sixteen months and a security release behind. Use the Asset Store or
   the GitHub release.
+
+## Host mode traps
+
+Running single-player as a host is the decision everything else rests on, and it
+has sharp edges that only show up in host mode. Recording them as they are found.
+
+**Set spawn state before the object is spawned, never after.** In host mode
+Mirror serialises an object's spawn payload inside `AddPlayerForConnection`, then
+hands that payload straight back to the host client, which deserialises it onto
+*the very same object* — see `NetworkClient.OnHostClientSpawn`. Anything written
+to a `[SyncVar]` after that call is silently overwritten with its pre-spawn
+value. Assigning roles after `base.OnServerAddPlayer` left every player a runner,
+so no catcher existed and nothing could ever freeze. It reads correctly if you
+check immediately after writing; the overwrite lands a moment later.
+
+**`[SyncVar]` hooks do not fire server-side outside host mode, and not at all for
+objects outside the host client's interest range.** The condition in
+`NetworkBehaviour.GeneratedSyncVarSetter` is
+`NetworkServer.activeHost && !hookGuard && NetworkClient.spawned.ContainsKey(netId)`.
+So side effects must not live in the hook alone — apply them through one method
+called from both the hook and the server-side mutator, and make it idempotent.
+`Freezable` does exactly that.

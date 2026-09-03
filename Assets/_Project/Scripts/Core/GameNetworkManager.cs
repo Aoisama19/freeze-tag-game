@@ -44,18 +44,41 @@ namespace BarafPaani.Core
         }
 
         /// <summary>
-        /// First player into the match is the catcher, everyone after is a runner.
-        /// Placeholder until the menu does real role selection, but it is enough
-        /// to make freeze testable.
+        /// Spawns a player and gives it a role. First one into the match is the
+        /// catcher, everyone after is a runner — a placeholder until the menu
+        /// does real role selection.
+        ///
+        /// This does the spawn itself instead of calling base, because the role
+        /// has to be set *before* the object is spawned. In host mode Mirror
+        /// serialises the spawn payload inside AddPlayerForConnection and then
+        /// deserialises it straight back onto the very same object, so anything
+        /// written after that call is silently overwritten with the pre-spawn
+        /// value. Setting the role afterwards left every player a runner, and
+        /// so nothing could ever freeze.
         /// </summary>
         public override void OnServerAddPlayer(NetworkConnectionToClient conn)
         {
-            base.OnServerAddPlayer(conn);
-
-            if (conn.identity != null && conn.identity.TryGetComponent(out PlayerRole role))
+            if (conn.identity != null)
             {
-                role.SetRole(numPlayers == 1 ? Role.Catcher : Role.Runner);
+                Debug.LogError("There is already a player for this connection.");
+                return;
             }
+
+            Transform start = GetStartPosition();
+
+            GameObject player = start != null
+                ? Instantiate(playerPrefab, start.position, start.rotation)
+                : Instantiate(playerPrefab);
+
+            player.name = $"{playerPrefab.name} [connId={conn.connectionId}]";
+
+            // Counted before the spawn, so the first player in sees zero.
+            if (player.TryGetComponent(out PlayerRole role))
+            {
+                role.SetRole(numPlayers == 0 ? Role.Catcher : Role.Runner);
+            }
+
+            NetworkServer.AddPlayerForConnection(conn, player);
         }
 
         public void JoinMultiplayer(string address)
