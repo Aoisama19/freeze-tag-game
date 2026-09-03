@@ -29,6 +29,11 @@ namespace BarafPaani.Core
         [Tooltip("AI runners spawned to fill out a single-player match.")]
         private int _singlePlayerRunners = 3;
 
+        [SerializeField]
+        [Tooltip("Off makes you a runner and hands the catcher role to an AI, " +
+                 "so the chasing and guarding behaviour can be watched from the other side.")]
+        private bool _humanIsCatcher = true;
+
         /// <summary>How this session was started. Set before the host comes up.</summary>
         public GameMode ActiveMode { get; private set; } = GameMode.SinglePlayer;
 
@@ -82,9 +87,11 @@ namespace BarafPaani.Core
             player.name = $"{playerPrefab.name} [connId={conn.connectionId}]";
 
             // Counted before the spawn, so the first player in sees zero.
+            bool isFirstIn = numPlayers == 0;
+
             if (player.TryGetComponent(out PlayerRole role))
             {
-                role.SetRole(numPlayers == 0 ? Role.Catcher : Role.Runner);
+                role.SetRole(isFirstIn && _humanIsCatcher ? Role.Catcher : Role.Runner);
             }
 
             NetworkServer.AddPlayerForConnection(conn, player);
@@ -101,7 +108,7 @@ namespace BarafPaani.Core
             // how many humans actually turned up.
             if (ActiveMode == GameMode.SinglePlayer)
             {
-                SpawnAiRunners();
+                SpawnAiCharacters();
             }
         }
 
@@ -130,7 +137,12 @@ namespace BarafPaani.Core
             }
         }
 
-        private void SpawnAiRunners()
+        /// <summary>
+        /// Fills the match out with AI. When the human is a runner an AI takes
+        /// the catcher role, so the chasing and guarding side can be watched
+        /// from the other end rather than only inferred from being caught.
+        /// </summary>
+        private void SpawnAiCharacters()
         {
             if (_aiCharacterPrefab == null)
             {
@@ -139,24 +151,34 @@ namespace BarafPaani.Core
                 return;
             }
 
+            if (!_humanIsCatcher)
+            {
+                SpawnAiCharacter(Role.Catcher, "AI Catcher");
+            }
+
             for (int i = 0; i < _singlePlayerRunners; i++)
             {
-                Transform start = GetStartPosition();
-
-                GameObject runner = start != null
-                    ? Instantiate(_aiCharacterPrefab, start.position, start.rotation)
-                    : Instantiate(_aiCharacterPrefab);
-
-                runner.name = $"AI Runner {i + 1}";
-
-                // Before the spawn, for exactly the same reason as human players.
-                if (runner.TryGetComponent(out PlayerRole role))
-                {
-                    role.SetRole(Role.Runner);
-                }
-
-                NetworkServer.Spawn(runner);
+                SpawnAiCharacter(Role.Runner, $"AI Runner {i + 1}");
             }
+        }
+
+        private void SpawnAiCharacter(Role role, string name)
+        {
+            Transform start = GetStartPosition();
+
+            GameObject character = start != null
+                ? Instantiate(_aiCharacterPrefab, start.position, start.rotation)
+                : Instantiate(_aiCharacterPrefab);
+
+            character.name = name;
+
+            // Before the spawn, for exactly the same reason as human players.
+            if (character.TryGetComponent(out PlayerRole playerRole))
+            {
+                playerRole.SetRole(role);
+            }
+
+            NetworkServer.Spawn(character);
         }
 
         public void JoinMultiplayer(string address)

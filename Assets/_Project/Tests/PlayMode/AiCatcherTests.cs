@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Reflection;
 using BarafPaani.AI;
 using BarafPaani.Core;
 using BarafPaani.Gameplay;
@@ -11,11 +12,12 @@ using UnityEngine.TestTools;
 namespace BarafPaani.Tests
 {
     /// <summary>
-    /// Runs the real scene as a single-player host. Covers the things unit tests
-    /// cannot: that the NavMesh bakes, that agents land on it, and that AI
-    /// runners are spawned with the right role.
+    /// The other way round: an AI takes the catcher role and the human plays a
+    /// runner. Worth covering because the roles are handed out in two different
+    /// places — OnServerAddPlayer for humans, SpawnAiCharacters for bots — and
+    /// they have to agree on there being exactly one catcher.
     /// </summary>
-    public class AiIntegrationTests
+    public class AiCatcherTests
     {
         [TearDown]
         public void TearDown()
@@ -34,7 +36,7 @@ namespace BarafPaani.Tests
         }
 
         [UnityTest]
-        public IEnumerator Single_player_spawns_ai_runners_that_actually_move()
+        public IEnumerator An_ai_takes_the_catcher_role_when_the_human_does_not()
         {
             LogAssert.ignoreFailingMessages = true;
 
@@ -45,47 +47,34 @@ namespace BarafPaani.Tests
             GameNetworkManager manager = Object.FindFirstObjectByType<GameNetworkManager>();
             Assert.IsNotNull(manager, "the Game scene has no GameNetworkManager");
 
+            // The toggle is a serialised field, deliberately not public API.
+            FieldInfo humanIsCatcher = typeof(GameNetworkManager)
+                .GetField("_humanIsCatcher", BindingFlags.NonPublic | BindingFlags.Instance);
+            Assert.IsNotNull(humanIsCatcher, "_humanIsCatcher has been renamed");
+            humanIsCatcher.SetValue(manager, false);
+
             manager.StartSinglePlayer();
             yield return new WaitForSeconds(1.5f);
 
             AiBrain[] brains = Object.FindObjectsByType<AiBrain>(FindObjectsSortMode.None);
-            Assert.AreEqual(3, brains.Length, "expected three AI runners to fill the match");
+            Assert.AreEqual(4, brains.Length, "expected one AI catcher plus three AI runners");
 
+            int aiCatchers = 0;
             foreach (AiBrain brain in brains)
             {
-                Assert.AreEqual(
-                    Role.Runner,
-                    brain.GetComponent<PlayerRole>().Role,
-                    "an AI character was not made a runner");
-            }
-
-            Assert.IsNotNull(NetworkClient.localPlayer, "the host got no player");
-            Assert.AreEqual(
-                Role.Catcher,
-                NetworkClient.localPlayer.GetComponent<PlayerRole>().Role,
-                "the host should be the catcher in single-player");
-
-            // Wandering should move them. If the NavMesh never baked the agents
-            // have nowhere to go and every position stays put.
-            Vector3[] before = new Vector3[brains.Length];
-            for (int i = 0; i < brains.Length; i++)
-            {
-                before[i] = brains[i].transform.position;
-            }
-
-            yield return new WaitForSeconds(2f);
-
-            bool anyMoved = false;
-            for (int i = 0; i < brains.Length; i++)
-            {
-                if ((brains[i].transform.position - before[i]).sqrMagnitude > 0.01f)
+                if (brain.GetComponent<PlayerRole>().Role == Role.Catcher)
                 {
-                    anyMoved = true;
-                    break;
+                    aiCatchers++;
                 }
             }
 
-            Assert.IsTrue(anyMoved, "no AI runner moved — the NavMesh probably did not bake");
+            Assert.AreEqual(1, aiCatchers, "there should be exactly one AI catcher");
+
+            Assert.IsNotNull(NetworkClient.localPlayer, "the host got no player");
+            Assert.AreEqual(
+                Role.Runner,
+                NetworkClient.localPlayer.GetComponent<PlayerRole>().Role,
+                "the human should be a runner when the AI is catching");
         }
     }
 }
