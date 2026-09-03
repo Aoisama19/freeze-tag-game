@@ -94,3 +94,35 @@ Assets/
 - **Runtime avatar loading.** Ready Player Me and glTFast were the two most
   fragile dependencies in the old project and pulled from pinned Git URLs that
   required network access on first open. Avatars get baked to prefabs instead.
+
+Ready Player Me is now confirmed dropped, not just proposed.
+
+## Scope of the first pass
+
+One map, not all four. Freeze, unfreeze, the server-side AI and power-ups get
+proven correct on a single map before 3 Talwaar, Badshahi Masjid, Faisal Mosque
+and Clock Tower are ported across. Each map is then a self-contained addition
+rather than four sets of scene-specific breakage arriving while the core systems
+are still moving.
+
+## Versions
+
+| | Version | Note |
+|---|---|---|
+| Unity | 6000.3.23f1 (6.3 LTS) | Supported to Dec 2027 |
+| Template | `com.unity.template.urp-blank` 17.0.14 | "3D URP" — what 6.3 calls Universal 3D |
+| URP | 17.0.1 | |
+| Input System | 1.12.0 | |
+| AI Navigation | 2.0.0 | NavMesh, for the server-side agents |
+| Mirror | 96.11.2 (22 Aug 2026) | |
+
+Two version notes worth keeping in view:
+
+- **Mirror states support through Unity 6000.1**, and we are on 6000.3. Nothing
+  is known to break — 6.3 is still Mono and .NET Standard 2.1, and the runtime
+  replacement that would actually threaten Mirror is CoreCLR in 6.6 — but this
+  combination is not something Mirror validates. If odd Weaver behaviour shows
+  up, this is the first thing to suspect.
+- **Do not install Mirror from OpenUPM.** That registry is stuck on 96.6.4 from
+  May 2025, sixteen months and a security release behind. Use the Asset Store or
+  the GitHub release.
