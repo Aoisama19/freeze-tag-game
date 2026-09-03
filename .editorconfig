@@ -1,0 +1,47 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.{yml,yaml,json,md}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
+
+# ---------------------------------------------------------------
+# C#
+# ---------------------------------------------------------------
+[*.cs]
+indent_size = 4
+
+# Naming — private fields as _camelCase, matching the old codebase
+dotnet_naming_rule.private_fields_underscore.severity = suggestion
+dotnet_naming_rule.private_fields_underscore.symbols  = private_fields
+dotnet_naming_rule.private_fields_underscore.style    = underscore_camel
+
+dotnet_naming_symbols.private_fields.applicable_kinds = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private
+
+dotnet_naming_style.underscore_camel.required_prefix = _
+dotnet_naming_style.underscore_camel.capitalization  = camel_case
+
+# Prefer explicit types — clearer when reading gameplay code cold
+csharp_style_var_for_built_in_types = false:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_var_elsewhere = false:suggestion
+
+# Braces always, even on one-liners. The old build had several
+# single-statement ifs that quietly grew a second statement.
+csharp_prefer_braces = true:warning
+
+dotnet_sort_system_directives_first = true
+csharp_new_line_before_open_brace = all
+
+# Unity serialises private fields via [SerializeField]; don't flag them as unused
+dotnet_diagnostic.IDE0051.severity = none
