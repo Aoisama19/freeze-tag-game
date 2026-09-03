@@ -1,11 +1,14 @@
+using BarafPaani.AI;
 using BarafPaani.Core;
 using BarafPaani.Gameplay;
 using kcp2k;
 using Mirror;
+using Unity.AI.Navigation;
 using Unity.Cinemachine;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.SceneManagement;
 
 namespace BarafPaani.EditorTools
@@ -20,6 +23,7 @@ namespace BarafPaani.EditorTools
     public static class PlayableSceneBuilder
     {
         private const string PrefabPath = "Assets/_Project/Prefabs/Player.prefab";
+        private const string AiPrefabPath = "Assets/_Project/Prefabs/AiCharacter.prefab";
         private const string ScenePath = "Assets/_Project/Scenes/Game.unity";
 
         private static readonly Vector3[] SpawnPoints =
@@ -34,7 +38,8 @@ namespace BarafPaani.EditorTools
         public static void Rebuild()
         {
             GameObject playerPrefab = BuildPlayerPrefab();
-            BuildScene(playerPrefab);
+            GameObject aiPrefab = BuildAiPrefab();
+            BuildScene(playerPrefab, aiPrefab);
 
             AssetDatabase.SaveAssets();
             Debug.Log("Baraf-Paani: rebuilt the player prefab and the playable scene.");
@@ -100,7 +105,81 @@ namespace BarafPaani.EditorTools
             return saved;
         }
 
-        private static void BuildScene(GameObject playerPrefab)
+        /// <summary>
+        /// The AI character. Separate from the player prefab because a
+        /// NavMeshAgent drives the transform itself and would fight a
+        /// CharacterController, and because the server owns AI movement while a
+        /// player owns their own — opposite sync directions.
+        ///
+        /// The rules are the same components either way: Freezable, PlayerRole
+        /// and TagOnContact are shared, so an AI freezes and is freed by exactly
+        /// the code that handles humans.
+        /// </summary>
+        private static GameObject BuildAiPrefab()
+        {
+            GameObject root = new GameObject("AiCharacter");
+
+            // A plain collider rather than a CharacterController: the agent does
+            // the moving, but other characters' proximity checks still need to be
+            // able to find this one.
+            CapsuleCollider capsule = root.AddComponent<CapsuleCollider>();
+            capsule.height = 2f;
+            capsule.radius = 0.35f;
+            capsule.center = new Vector3(0f, 1f, 0f);
+
+            NavMeshAgent agent = root.AddComponent<NavMeshAgent>();
+            agent.radius = 0.35f;
+            agent.height = 2f;
+            agent.speed = 4.2f;
+            agent.angularSpeed = 480f;
+            agent.acceleration = 20f;
+            agent.stoppingDistance = 0.6f;
+
+            GameObject body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            body.name = "Body";
+            body.transform.SetParent(root.transform, false);
+            body.transform.localPosition = new Vector3(0f, 1f, 0f);
+            Object.DestroyImmediate(body.GetComponent<CapsuleCollider>());
+
+            GameObject eye = new GameObject("Eye");
+            eye.transform.SetParent(root.transform, false);
+            eye.transform.localPosition = new Vector3(0f, 1.6f, 0f);
+
+            root.AddComponent<NetworkIdentity>();
+
+            NetworkTransformReliable sync = root.AddComponent<NetworkTransformReliable>();
+            sync.target = root.transform;
+
+            // Opposite of the player prefab: the server decides where AI go.
+            sync.syncDirection = SyncDirection.ServerToClient;
+            sync.syncInterval = 0.05f;
+
+            root.AddComponent<PlayerRole>();
+
+            Freezable freezable = root.AddComponent<Freezable>();
+            SerializedObject freezeState = new SerializedObject(freezable);
+            freezeState.FindProperty("_bodyRenderer").objectReferenceValue = body.GetComponent<Renderer>();
+            freezeState.ApplyModifiedPropertiesWithoutUndo();
+
+            root.AddComponent<TagOnContact>();
+
+            Vision vision = root.AddComponent<Vision>();
+            SerializedObject visionState = new SerializedObject(vision);
+            visionState.FindProperty("_eye").objectReferenceValue = eye.transform;
+            visionState.ApplyModifiedPropertiesWithoutUndo();
+
+            AiBrain brain = root.AddComponent<AiBrain>();
+            SerializedObject brainState = new SerializedObject(brain);
+            brainState.FindProperty("_vision").objectReferenceValue = vision;
+            brainState.ApplyModifiedPropertiesWithoutUndo();
+
+            GameObject saved = PrefabUtility.SaveAsPrefabAsset(root, AiPrefabPath);
+            Object.DestroyImmediate(root);
+
+            return saved;
+        }
+
+        private static void BuildScene(GameObject playerPrefab, GameObject aiPrefab)
         {
             Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
 
@@ -110,8 +189,15 @@ namespace BarafPaani.EditorTools
             ground.name = "Ground";
             ground.transform.localScale = new Vector3(5f, 1f, 5f);
 
+            // The AI walks on this, so it needs a NavMesh surface. Only the
+            // component is set up here — GameNetworkManager bakes it when the
+            // server starts, because a bake done at build time is runtime-only
+            // data that does not survive saving the scene.
+            NavMeshSurface surface = ground.AddComponent<NavMeshSurface>();
+            surface.collectObjects = CollectObjects.All;
+
             BuildCamera();
-            BuildNetworkManager(playerPrefab);
+            BuildNetworkManager(playerPrefab, aiPrefab);
 
             for (int i = 0; i < SpawnPoints.Length; i++)
             {
@@ -171,7 +257,7 @@ namespace BarafPaani.EditorTools
             rig.AddComponent<CinemachineInputAxisController>();
         }
 
-        private static void BuildNetworkManager(GameObject playerPrefab)
+        private static void BuildNetworkManager(GameObject playerPrefab, GameObject aiPrefab)
         {
             GameObject host = new GameObject("NetworkManager");
 
@@ -182,6 +268,15 @@ namespace BarafPaani.EditorTools
             manager.playerPrefab = playerPrefab;
             manager.autoCreatePlayer = true;
             manager.playerSpawnMethod = PlayerSpawnMethod.RoundRobin;
+
+            // Clients need the AI prefab registered or they cannot spawn what the
+            // server tells them about.
+            manager.spawnPrefabs.Clear();
+            manager.spawnPrefabs.Add(aiPrefab);
+
+            SerializedObject managerState = new SerializedObject(manager);
+            managerState.FindProperty("_aiCharacterPrefab").objectReferenceValue = aiPrefab;
+            managerState.ApplyModifiedPropertiesWithoutUndo();
 
             // Mirror's stock Host/Client/Server buttons. Temporary — it goes when
             // there is a real menu driving GameNetworkManager instead.

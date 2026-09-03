@@ -1,5 +1,6 @@
 using BarafPaani.Gameplay;
 using Mirror;
+using Unity.AI.Navigation;
 using UnityEngine;
 
 namespace BarafPaani.Core
@@ -19,6 +20,14 @@ namespace BarafPaani.Core
         [SerializeField]
         [Tooltip("Remote players allowed in when hosting a multiplayer match.")]
         private int _multiplayerMaxConnections = 8;
+
+        [SerializeField]
+        [Tooltip("Character used for AI-controlled runners.")]
+        private GameObject _aiCharacterPrefab;
+
+        [SerializeField]
+        [Tooltip("AI runners spawned to fill out a single-player match.")]
+        private int _singlePlayerRunners = 3;
 
         /// <summary>How this session was started. Set before the host comes up.</summary>
         public GameMode ActiveMode { get; private set; } = GameMode.SinglePlayer;
@@ -79,6 +88,75 @@ namespace BarafPaani.Core
             }
 
             NetworkServer.AddPlayerForConnection(conn, player);
+        }
+
+        public override void OnStartServer()
+        {
+            base.OnStartServer();
+
+            BuildNavMeshes();
+
+            // Single-player is a host with nobody else in it, so the AI has to
+            // provide the opposition. Multiplayer gets AI later, once we know
+            // how many humans actually turned up.
+            if (ActiveMode == GameMode.SinglePlayer)
+            {
+                SpawnAiRunners();
+            }
+        }
+
+        /// <summary>
+        /// Bakes the map's NavMesh before any agent spawns.
+        ///
+        /// Done at runtime rather than committed as a baked asset: only the
+        /// server needs one, it cannot go stale against the geometry, and it
+        /// keeps a binary out of the repo. Worth revisiting for the real maps,
+        /// where bake time will matter more than it does on a flat plane.
+        /// </summary>
+        private static void BuildNavMeshes()
+        {
+            NavMeshSurface[] surfaces =
+                FindObjectsByType<NavMeshSurface>(FindObjectsSortMode.None);
+
+            if (surfaces.Length == 0)
+            {
+                Debug.LogWarning("No NavMeshSurface in the scene, so the AI has nowhere to walk.");
+                return;
+            }
+
+            foreach (NavMeshSurface surface in surfaces)
+            {
+                surface.BuildNavMesh();
+            }
+        }
+
+        private void SpawnAiRunners()
+        {
+            if (_aiCharacterPrefab == null)
+            {
+                Debug.LogWarning(
+                    "No AI character prefab is set, so single-player has nobody to catch.", this);
+                return;
+            }
+
+            for (int i = 0; i < _singlePlayerRunners; i++)
+            {
+                Transform start = GetStartPosition();
+
+                GameObject runner = start != null
+                    ? Instantiate(_aiCharacterPrefab, start.position, start.rotation)
+                    : Instantiate(_aiCharacterPrefab);
+
+                runner.name = $"AI Runner {i + 1}";
+
+                // Before the spawn, for exactly the same reason as human players.
+                if (runner.TryGetComponent(out PlayerRole role))
+                {
+                    role.SetRole(Role.Runner);
+                }
+
+                NetworkServer.Spawn(runner);
+            }
         }
 
         public void JoinMultiplayer(string address)
