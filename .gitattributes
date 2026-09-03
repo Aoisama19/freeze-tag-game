@@ -14,6 +14,7 @@
 *.json              text eol=lf
 *.md                text eol=lf
 *.asmdef            text eol=lf
+*.inputactions      text eol=lf
 
 # ---------------------------------------------------------------
 # Unity YAML — use Unity's SmartMerge for scenes and prefabs
