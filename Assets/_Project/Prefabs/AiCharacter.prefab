@@ -267,6 +267,12 @@ MonoBehaviour:
   _rescanInterval: 0.25
   _wanderRadius: 18
   _arriveDistance: 1.5
+  _dangerDistance: 9
+  _fleeDistance: 14
+  _rescueAbortDistance: 5
+  _guardSeconds: 6
+  _guardBreakSeconds: 6
+  _guardStandoff: 4
 --- !u!1 &4043637670215365192
 GameObject:
   m_ObjectHideFlags: 0
