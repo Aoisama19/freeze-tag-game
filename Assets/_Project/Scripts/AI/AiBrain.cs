@@ -181,19 +181,21 @@ namespace BarafPaani.AI
 
             if (_role.Role == Role.Catcher)
             {
-                // Known, not seen. A catcher restricted to a 14 metre view cone
-                // on a 120 metre map spends the game wandering past people, and
-                // only notices anyone who happens to walk into the cone — which
-                // plays as a broken opponent rather than a fair one.
+                // MapKnowledge says a catcher needs no line of sight to anyone,
+                // so this is a global lookup rather than a view-cone query. The
+                // minimap shows the catcher the same thing.
                 _visibleQuarry = ServerCharacters.FindNearest(here, transform, _acceptApproachTarget);
 
                 _frozenCharacter = ServerCharacters.FindNearest(here, transform, _acceptFrozenRunner);
                 return;
             }
 
-            // A runner still has to actually see the catcher to be afraid of it,
-            // but it remembers for a few seconds afterwards.
-            _visibleCatcher = _vision != null ? _vision.FindNearestVisible(_acceptCatcher) : null;
+            // A runner has to look for the catcher, and only the catcher — the
+            // one case where MapKnowledge demands line of sight. Memory of where
+            // it was last seen is handled by the caller.
+            _visibleCatcher = MapKnowledge.NeedsLineOfSight(Role.Runner, Role.Catcher) && _vision != null
+                ? _vision.FindNearestVisible(_acceptCatcher)
+                : ServerCharacters.FindNearest(here, transform, _acceptCatcher);
 
             if (_visibleCatcher != null)
             {
