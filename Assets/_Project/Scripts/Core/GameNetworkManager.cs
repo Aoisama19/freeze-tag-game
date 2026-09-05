@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using BarafPaani.AI;
 using BarafPaani.Gameplay;
 using Mirror;
 using Unity.AI.Navigation;
@@ -26,8 +28,9 @@ namespace BarafPaani.Core
         private GameObject _aiCharacterPrefab;
 
         [SerializeField]
-        [Tooltip("AI runners spawned to fill out a single-player match.")]
-        private int _singlePlayerRunners = 3;
+        [Tooltip("How many runners a match should have, humans and AI together. " +
+                 "Bots fill the gaps and step out again as people arrive.")]
+        private int _targetRunners = 3;
 
         [SerializeField]
         [Tooltip("Which side you play. Set it to Runner and an AI takes the catcher role, " +
@@ -106,6 +109,9 @@ namespace BarafPaani.Core
             }
 
             NetworkServer.AddPlayerForConnection(conn, player);
+
+            // After the human is in, so they are counted rather than added on top.
+            FillWithAi();
         }
 
         public override void OnStartServer()
@@ -113,14 +119,16 @@ namespace BarafPaani.Core
             base.OnStartServer();
 
             CheckNavMeshes();
+        }
 
-            // Single-player is a host with nobody else in it, so the AI has to
-            // provide the opposition. Multiplayer gets AI later, once we know
-            // how many humans actually turned up.
-            if (ActiveMode == GameMode.SinglePlayer)
-            {
-                SpawnAiCharacters();
-            }
+        /// <summary>
+        /// Tops the match back up after somebody leaves, so a match does not
+        /// quietly empty out as people drop.
+        /// </summary>
+        public override void OnServerDisconnect(NetworkConnectionToClient conn)
+        {
+            base.OnServerDisconnect(conn);
+            FillWithAi();
         }
 
         /// <summary>
@@ -159,28 +167,70 @@ namespace BarafPaani.Core
         }
 
         /// <summary>
-        /// Fills the match out with AI. When the human is a runner an AI takes
-        /// the catcher role, so the chasing and guarding side can be watched
-        /// from the other end rather than only inferred from being caught.
+        /// Brings the match up to strength with AI, and lets bots step aside as
+        /// people arrive.
+        ///
+        /// Keyed on headcount rather than on the game mode. AI used to be a
+        /// single-player special case, which meant hosting a match and waiting
+        /// for friends left you alone in an empty city. Counting instead means
+        /// hosting alone plays exactly like single-player and thins out as
+        /// people join, which is what "single-player is a host with nobody
+        /// connected" should mean in practice.
+        ///
+        /// Safe to call repeatedly: it works from what is actually in the game
+        /// rather than from what it did last time.
         /// </summary>
-        private void SpawnAiCharacters()
+        private void FillWithAi()
         {
             if (_aiCharacterPrefab == null)
             {
-                Debug.LogWarning(
-                    "No AI character prefab is set, so single-player has nobody to catch.", this);
+                Debug.LogWarning("No AI character prefab is set, so nobody can be caught.", this);
                 return;
             }
 
-            // Somebody has to catch. If the human is not doing it, an AI does.
-            if (_humanRole != Role.Catcher)
+            int catchers = 0;
+            int runners = 0;
+            List<NetworkIdentity> spareBots = new List<NetworkIdentity>();
+
+            foreach (NetworkIdentity identity in NetworkServer.spawned.Values)
+            {
+                if (identity == null || !identity.TryGetComponent(out PlayerRole role))
+                {
+                    continue;
+                }
+
+                if (role.Role == Role.Catcher)
+                {
+                    catchers++;
+                    continue;
+                }
+
+                runners++;
+
+                // Only bots can be asked to leave.
+                if (identity.TryGetComponent(out AiBrain _))
+                {
+                    spareBots.Add(identity);
+                }
+            }
+
+            // Somebody has to catch. If no human took it, an AI does.
+            if (catchers == 0)
             {
                 SpawnAiCharacter(Role.Catcher, "AI Catcher");
             }
 
-            for (int i = 0; i < _singlePlayerRunners; i++)
+            for (int i = runners; i < _targetRunners; i++)
             {
                 SpawnAiCharacter(Role.Runner, $"AI Runner {i + 1}");
+            }
+
+            // A human arrived and the match is over strength, so a bot steps out.
+            for (int i = 0; i < runners - _targetRunners && spareBots.Count > 0; i++)
+            {
+                NetworkIdentity bot = spareBots[spareBots.Count - 1];
+                spareBots.RemoveAt(spareBots.Count - 1);
+                NetworkServer.Destroy(bot.gameObject);
             }
         }
 

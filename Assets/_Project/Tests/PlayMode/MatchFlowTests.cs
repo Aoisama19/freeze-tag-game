@@ -63,6 +63,30 @@ namespace BarafPaani.Tests
         }
 
         [UnityTest]
+        public IEnumerator Hosting_a_multiplayer_match_alone_still_fills_with_bots()
+        {
+            // AI used to be a single-player special case, so hosting and waiting
+            // for friends left you alone in an empty city.
+            LogAssert.ignoreFailingMessages = true;
+
+            SceneManager.LoadScene("Game", LoadSceneMode.Single);
+            yield return null;
+            yield return null;
+
+            GameNetworkManager manager = Object.FindFirstObjectByType<GameNetworkManager>();
+            Assert.IsNotNull(manager);
+
+            manager.StartMultiplayerHost();
+            yield return new WaitForSeconds(1.5f);
+
+            MatchState match = Object.FindFirstObjectByType<MatchState>();
+            Assert.IsNotNull(match, "no MatchState in the hosted match");
+
+            Assert.AreEqual(
+                3, match.RunnersTotal, "a host on their own should still get a full set of runners");
+        }
+
+        [UnityTest]
         public IEnumerator Freezing_every_runner_ends_the_round()
         {
             yield return StartMatch();

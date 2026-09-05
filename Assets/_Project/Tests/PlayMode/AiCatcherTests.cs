@@ -52,18 +52,27 @@ namespace BarafPaani.Tests
             yield return new WaitForSeconds(1.5f);
 
             AiBrain[] brains = Object.FindObjectsByType<AiBrain>(FindObjectsSortMode.None);
-            Assert.AreEqual(4, brains.Length, "expected one AI catcher plus three AI runners");
 
             int aiCatchers = 0;
+            int aiRunners = 0;
+
             foreach (AiBrain brain in brains)
             {
                 if (brain.GetComponent<PlayerRole>().Role == Role.Catcher)
                 {
                     aiCatchers++;
                 }
+                else
+                {
+                    aiRunners++;
+                }
             }
 
             Assert.AreEqual(1, aiCatchers, "there should be exactly one AI catcher");
+
+            // The human is one of the runners now rather than an extra on top,
+            // so the bots only fill what is left of the headcount.
+            Assert.AreEqual(2, aiRunners, "two bots should fill the rest of the runner slots");
 
             Assert.IsNotNull(NetworkClient.localPlayer, "the host got no player");
             Assert.AreEqual(
