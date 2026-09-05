@@ -30,9 +30,20 @@ namespace BarafPaani.Core
         private int _singlePlayerRunners = 3;
 
         [SerializeField]
-        [Tooltip("Off makes you a runner and hands the catcher role to an AI, " +
+        [Tooltip("Which side you play. Set it to Runner and an AI takes the catcher role, " +
                  "so the chasing and guarding behaviour can be watched from the other side.")]
-        private bool _humanIsCatcher = true;
+        private Role _humanRole = Role.Catcher;
+
+        /// <summary>
+        /// Which side the local player takes. Settable so the menu can choose it
+        /// before the host comes up; the inspector value is the fallback when the
+        /// game scene is opened on its own.
+        /// </summary>
+        public Role HumanRole
+        {
+            get => _humanRole;
+            set => _humanRole = value;
+        }
 
         /// <summary>How this session was started. Set before the host comes up.</summary>
         public GameMode ActiveMode { get; private set; } = GameMode.SinglePlayer;
@@ -91,7 +102,7 @@ namespace BarafPaani.Core
 
             if (player.TryGetComponent(out PlayerRole role))
             {
-                role.SetRole(isFirstIn && _humanIsCatcher ? Role.Catcher : Role.Runner);
+                role.SetRole(isFirstIn ? _humanRole : Role.Runner);
             }
 
             NetworkServer.AddPlayerForConnection(conn, player);
@@ -161,7 +172,8 @@ namespace BarafPaani.Core
                 return;
             }
 
-            if (!_humanIsCatcher)
+            // Somebody has to catch. If the human is not doing it, an AI does.
+            if (_humanRole != Role.Catcher)
             {
                 SpawnAiCharacter(Role.Catcher, "AI Catcher");
             }

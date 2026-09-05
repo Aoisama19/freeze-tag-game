@@ -8,6 +8,11 @@ namespace BarafPaani.Core
     public enum GameMode
     {
         SinglePlayer,
-        Multiplayer
+
+        /// <summary>Hosting a match others can join.</summary>
+        Multiplayer,
+
+        /// <summary>Joining somebody else's match.</summary>
+        MultiplayerJoin
     }
 }

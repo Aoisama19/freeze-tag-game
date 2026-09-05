@@ -50,6 +50,10 @@ namespace BarafPaani.EditorTools
 
         private const string NavMeshAssetPath = "Assets/_Project/Scenes/GameNavMesh.asset";
 
+        private const string MenuFontPath = "Assets/_Project/Art/UI/Fonts/Orbitron.ttf";
+
+        private const string MatchSetupPath = "Assets/_Project/Settings/MatchSetup.asset";
+
         private const string MinimapTexturePath =
             "Assets/_Project/Scenes/MinimapTexture.renderTexture";
 
@@ -578,7 +582,9 @@ namespace BarafPaani.EditorTools
         /// </summary>
         private static void BuildMatchLabels(GameObject hud)
         {
-            Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            // The game's own font, brought over from the original build.
+            Font font = AssetDatabase.LoadAssetAtPath<Font>(MenuFontPath)
+                ?? Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
             Text runners = MakeLabel(hud, "RunnersLabel", font, 22, TextAnchor.UpperLeft);
             Place(runners.rectTransform, new Vector2(0f, 1f), new Vector2(24f, -24f), new Vector2(340f, 32f));
@@ -844,6 +850,15 @@ namespace BarafPaani.EditorTools
             // Mirror's stock Host/Client/Server buttons. Temporary — it goes when
             // there is a real menu driving GameNetworkManager instead.
             host.AddComponent<NetworkManagerHUD>();
+
+            // Starts whatever the menu asked for. Does nothing when the scene is
+            // opened on its own, which is what keeps it usable without the menu.
+            GameLauncher launcher = host.AddComponent<GameLauncher>();
+
+            SerializedObject launcherState = new SerializedObject(launcher);
+            launcherState.FindProperty("_setup").objectReferenceValue =
+                MainMenuBuilder.EnsureSetup();
+            launcherState.ApplyModifiedPropertiesWithoutUndo();
         }
     }
 }

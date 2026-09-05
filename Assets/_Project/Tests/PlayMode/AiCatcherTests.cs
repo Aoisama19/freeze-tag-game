@@ -1,5 +1,4 @@
 using System.Collections;
-using System.Reflection;
 using BarafPaani.AI;
 using BarafPaani.Core;
 using BarafPaani.Gameplay;
@@ -47,11 +46,7 @@ namespace BarafPaani.Tests
             GameNetworkManager manager = Object.FindFirstObjectByType<GameNetworkManager>();
             Assert.IsNotNull(manager, "the Game scene has no GameNetworkManager");
 
-            // The toggle is a serialised field, deliberately not public API.
-            FieldInfo humanIsCatcher = typeof(GameNetworkManager)
-                .GetField("_humanIsCatcher", BindingFlags.NonPublic | BindingFlags.Instance);
-            Assert.IsNotNull(humanIsCatcher, "_humanIsCatcher has been renamed");
-            humanIsCatcher.SetValue(manager, false);
+            manager.HumanRole = Role.Runner;
 
             manager.StartSinglePlayer();
             yield return new WaitForSeconds(1.5f);
