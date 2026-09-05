@@ -36,12 +36,47 @@ namespace BarafPaani.EditorTools
         private const int SpawnPointCount = 8;
 
         /// <summary>
-        /// Ring radius. The ground is a 50x50 plane, so this keeps everyone well
-        /// inside it while putting opposite points 32 metres apart — the AI is
-        /// spawned before the human, so the human lands across the ring from the
-        /// catcher rather than next to it.
+        /// Ring radius, measured from the arena centre. Kept inside the arena
+        /// walls with room to spare, and puts opposite points 80 metres apart —
+        /// the AI spawns before the human, so the human lands across the ring
+        /// from the catcher rather than next to it.
         /// </summary>
-        private const float SpawnRingRadius = 16f;
+        private const float SpawnRingRadius = 40f;
+
+        private const string MapPrefabPath =
+            "Assets/_Project/Art/Maps/3Talwaar/Prefab/3 Talwaar v4.prefab";
+
+        /// <summary>
+        /// The playable square, cut down from 3 Talwaar's full 537x464 metres.
+        /// The original walled off roughly 251x198 with road barriers, which is a
+        /// long way for one catcher to cover; this keeps the same streets but
+        /// tightens the game. Widening is a matter of changing this number.
+        /// </summary>
+        private const float ArenaSize = 120f;
+
+        /// <summary>Tall enough that nobody vaults the arena walls.</summary>
+        private const float ArenaHeight = 40f;
+
+        /// <summary>
+        /// How far up the NavMesh volume reaches. Deliberately short: 3 Talwaar's
+        /// buildings have flat roofs, and a volume as tall as the arena walls
+        /// bakes navigable surface onto every one of them. That put two spawn
+        /// points on rooftops, 14 and 30 metres up, and would have let the agents
+        /// path across the skyline. Street level only.
+        /// </summary>
+        private const float NavMeshVolumeHeight = 8f;
+
+        /// <summary>
+        /// Ground sits near y=0, so anything sampled much above this is a roof or
+        /// a ledge rather than a street.
+        /// </summary>
+        private const float MaxSpawnHeight = 3f;
+
+        /// <summary>
+        /// Centre of the playable square, in the map's own coordinates. Sits on
+        /// the middle of the area the original barriers enclosed.
+        /// </summary>
+        private static readonly Vector3 ArenaCentre = new Vector3(11f, 0f, -9f);
 
         [MenuItem("Baraf-Paani/Rebuild Playable Scene")]
         public static void Rebuild()
@@ -194,38 +229,162 @@ namespace BarafPaani.EditorTools
 
             ClearGenerated(scene);
 
-            GameObject ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
-            ground.name = "Ground";
-            ground.transform.localScale = new Vector3(5f, 1f, 5f);
+            GameObject map = BuildMap();
+            BuildArenaWalls();
 
             // The AI walks on this, so it needs a NavMesh surface. Only the
             // component is set up here — GameNetworkManager bakes it when the
             // server starts, because a bake done at build time is runtime-only
             // data that does not survive saving the scene.
-            NavMeshSurface surface = ground.AddComponent<NavMeshSurface>();
-            surface.collectObjects = CollectObjects.All;
+            //
+            // Bounded to the arena rather than the whole map: 3 Talwaar is
+            // 537x464 metres, most of it outlying scenery, and without a volume
+            // the agents would happily path off into it.
+            NavMeshSurface surface = map.AddComponent<NavMeshSurface>();
+            surface.collectObjects = CollectObjects.Volume;
+            surface.center = new Vector3(
+                ArenaCentre.x, (NavMeshVolumeHeight * 0.5f) - 2f, ArenaCentre.z);
+            surface.size = new Vector3(ArenaSize, NavMeshVolumeHeight, ArenaSize);
 
             BuildCamera();
             BuildNetworkManager(playerPrefab, aiPrefab);
+            BuildSpawnPoints(surface);
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+        }
+
+        /// <summary>
+        /// Places the map and gives it collision.
+        ///
+        /// The imported prefab carries no colliders at all — the FBX was set to
+        /// addColliders 0, and turning that on does not retro-fit the prefab,
+        /// which stores its own component list. Without this, characters fall
+        /// straight through the city and the NavMesh has nothing to bake onto.
+        /// </summary>
+        private static GameObject BuildMap()
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(MapPrefabPath);
+
+            if (prefab == null)
+            {
+                Debug.LogError($"No map prefab at {MapPrefabPath}.");
+                return new GameObject("Map");
+            }
+
+            GameObject map = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            map.name = "Map";
+            map.transform.position = Vector3.zero;
+
+            int added = 0;
+
+            foreach (MeshFilter filter in map.GetComponentsInChildren<MeshFilter>())
+            {
+                if (filter.sharedMesh == null || filter.GetComponent<Collider>() != null)
+                {
+                    continue;
+                }
+
+                filter.gameObject.AddComponent<MeshCollider>();
+                added++;
+            }
+
+            Debug.Log($"Map: added {added} mesh colliders.");
+            return map;
+        }
+
+        /// <summary>
+        /// Four invisible walls around the arena. The map has no edge of its own
+        /// where we have cut it down, so without these a runner can simply leave
+        /// the game and stand in the scenery.
+        /// </summary>
+        private static void BuildArenaWalls()
+        {
+            GameObject walls = new GameObject("ArenaWalls");
+
+            float half = ArenaSize * 0.5f;
+            const float thickness = 2f;
+
+            (string name, Vector3 offset, Vector3 size)[] sides =
+            {
+                ("North", new Vector3(0f, 0f, half), new Vector3(ArenaSize, ArenaHeight, thickness)),
+                ("South", new Vector3(0f, 0f, -half), new Vector3(ArenaSize, ArenaHeight, thickness)),
+                ("East", new Vector3(half, 0f, 0f), new Vector3(thickness, ArenaHeight, ArenaSize)),
+                ("West", new Vector3(-half, 0f, 0f), new Vector3(thickness, ArenaHeight, ArenaSize))
+            };
+
+            foreach ((string name, Vector3 offset, Vector3 size) in sides)
+            {
+                GameObject wall = new GameObject($"Wall {name}");
+                wall.transform.SetParent(walls.transform, false);
+                wall.transform.position =
+                    ArenaCentre + offset + new Vector3(0f, ArenaHeight * 0.5f, 0f);
+
+                BoxCollider box = wall.AddComponent<BoxCollider>();
+                box.size = size;
+            }
+        }
+
+        /// <summary>
+        /// Puts spawn points on a ring, then drops each one onto the NavMesh so
+        /// it lands on ground a character can actually stand on. A ring position
+        /// picked blind could easily sit inside a building or off a kerb.
+        /// </summary>
+        private static void BuildSpawnPoints(NavMeshSurface surface)
+        {
+            // Bake now purely so positions can be sampled against real
+            // navigation data. The runtime bake still happens on the server, and
+            // this one is thrown away at the end of the method — leaving it in
+            // place embeds NavMeshData in the scene, which is a binary blob and
+            // turns the whole scene file binary. That kills diffs and the
+            // SmartMerge setup in .gitattributes.
+            surface.BuildNavMesh();
+
+            int placed = 0;
 
             for (int i = 0; i < SpawnPointCount; i++)
             {
                 float angle = i * Mathf.PI * 2f / SpawnPointCount;
-                Vector3 position = new Vector3(
+                Vector3 ideal = ArenaCentre + new Vector3(
                     Mathf.Sin(angle) * SpawnRingRadius, 0f, Mathf.Cos(angle) * SpawnRingRadius);
 
+                if (!NavMesh.SamplePosition(ideal, out NavMeshHit hit, SpawnRingRadius, NavMesh.AllAreas))
+                {
+                    Debug.LogWarning($"SpawnPoint {i + 1}: no navigable ground near {ideal}.");
+                    continue;
+                }
+
+                // Belt and braces alongside the short NavMesh volume: never put
+                // anyone on a roof, however the bake turns out.
+                if (hit.position.y > MaxSpawnHeight)
+                {
+                    Debug.LogWarning(
+                        $"SpawnPoint {i + 1}: nearest ground was {hit.position.y:F1}m up, so it was skipped.");
+                    continue;
+                }
+
                 GameObject spawn = new GameObject($"SpawnPoint {i + 1}");
-                spawn.transform.position = position;
+                spawn.transform.position = hit.position + new Vector3(0f, 0.1f, 0f);
 
                 // Face the middle, so whoever spawns here is looking at the game
                 // rather than out at empty ground.
-                spawn.transform.rotation = Quaternion.LookRotation(-position.normalized);
+                Vector3 inward = ArenaCentre - hit.position;
+                inward.y = 0f;
+
+                if (inward.sqrMagnitude > 0.001f)
+                {
+                    spawn.transform.rotation = Quaternion.LookRotation(inward.normalized);
+                }
 
                 spawn.AddComponent<NetworkStartPosition>();
+                placed++;
             }
 
-            EditorSceneManager.MarkSceneDirty(scene);
-            EditorSceneManager.SaveScene(scene);
+            // Throw the sampling bake away, so the scene saves as text.
+            surface.RemoveData();
+            surface.navMeshData = null;
+
+            Debug.Log($"Spawn points placed on the NavMesh: {placed} of {SpawnPointCount}.");
         }
 
         /// <summary>
@@ -234,7 +393,7 @@ namespace BarafPaani.EditorTools
         /// </summary>
         private static void ClearGenerated(Scene scene)
         {
-            string[] generated = { "Ground", "PlayerFollowCamera", "NetworkManager" };
+            string[] generated = { "Ground", "Map", "ArenaWalls", "PlayerFollowCamera", "NetworkManager" };
 
             foreach (GameObject root in scene.GetRootGameObjects())
             {
