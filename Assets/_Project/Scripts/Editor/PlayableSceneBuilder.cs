@@ -60,9 +60,9 @@ namespace BarafPaani.EditorTools
         private const int MinimapTextureSize = 512;
 
         /// <summary>On-screen size of the minimap panel, in canvas units.</summary>
-        private const float MinimapPanelSize = 200f;
+        private const float MinimapPanelSize = 300f;
 
-        private const float BlipSize = 9f;
+        private const float BlipSize = 20f;
 
         /// <summary>
         /// Half-width of what the minimap shows, in metres. The map follows the

@@ -191,7 +191,10 @@ namespace BarafPaani.UI
                 return existing;
             }
 
-            Image blip = Instantiate(_blipPrefab, _blipArea);
+            // worldPositionStays false: the UI default preserves world position
+            // instead, which rescales the clone against the canvas and would size
+            // blips wrongly the moment the template stops sharing a parent.
+            Image blip = Instantiate(_blipPrefab, _blipArea, false);
             blip.gameObject.name = $"Blip {netId}";
             _blips[netId] = blip;
             return blip;
