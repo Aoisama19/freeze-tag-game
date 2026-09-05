@@ -293,6 +293,7 @@ namespace BarafPaani.EditorTools
 
             BuildCamera();
             BuildNetworkManager(playerPrefab, aiPrefab);
+            BuildMatch();
             BuildHud();
             BuildSpawnPoints(surface);
 
@@ -454,6 +455,22 @@ namespace BarafPaani.EditorTools
         /// changes. It renders the map layer only — characters are blips, and
         /// drawing them twice would just be noise.
         /// </summary>
+        /// <summary>
+        /// The round runner, as its own scene object.
+        ///
+        /// Not on the NetworkManager, which is where it started: that object is
+        /// DontDestroyOnLoad and is not a spawned scene identity, so Mirror never
+        /// called OnStartServer on it. The round therefore never got an end time,
+        /// the clock read as already expired, and every match was won by the
+        /// runners the instant it began.
+        /// </summary>
+        private static void BuildMatch()
+        {
+            GameObject match = new GameObject("Match");
+            match.AddComponent<NetworkIdentity>();
+            match.AddComponent<MatchState>();
+        }
+
         private static void BuildHud()
         {
             int mapLayer = EnsureMapLayer();
@@ -545,7 +562,71 @@ namespace BarafPaani.EditorTools
             viewState.FindProperty("_mapCamera").objectReferenceValue = mapCamera;
             viewState.ApplyModifiedPropertiesWithoutUndo();
 
-            Debug.Log("HUD: circular minimap built.");
+            BuildMatchLabels(hud);
+
+            Debug.Log("HUD: circular minimap and match labels built.");
+        }
+
+
+        /// <summary>
+        /// The round's readout: who is left, the clock, and the result.
+        ///
+        /// Legacy UI Text with Unity's built-in font, not TextMeshPro. TMP ships
+        /// with the UI package but needs its essential resources imported through
+        /// a menu before it will render anything, and that is a step a fresh
+        /// clone would not have taken. Worth upgrading once, deliberately.
+        /// </summary>
+        private static void BuildMatchLabels(GameObject hud)
+        {
+            Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+
+            Text runners = MakeLabel(hud, "RunnersLabel", font, 22, TextAnchor.UpperLeft);
+            Place(runners.rectTransform, new Vector2(0f, 1f), new Vector2(24f, -24f), new Vector2(340f, 32f));
+
+            Text clock = MakeLabel(hud, "ClockLabel", font, 34, TextAnchor.UpperCenter);
+            Place(clock.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -24f), new Vector2(200f, 44f));
+
+            Text result = MakeLabel(hud, "ResultLabel", font, 40, TextAnchor.MiddleCenter);
+            Place(result.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 120f), new Vector2(900f, 60f));
+            result.enabled = false;
+
+            MatchHud matchHud = hud.AddComponent<MatchHud>();
+
+            SerializedObject state = new SerializedObject(matchHud);
+            state.FindProperty("_runnersLabel").objectReferenceValue = runners;
+            state.FindProperty("_clockLabel").objectReferenceValue = clock;
+            state.FindProperty("_resultLabel").objectReferenceValue = result;
+            state.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static Text MakeLabel(GameObject parent, string name, Font font, int size, TextAnchor anchor)
+        {
+            GameObject label = new GameObject(name);
+            label.transform.SetParent(parent.transform, false);
+
+            Text text = label.AddComponent<Text>();
+            text.font = font;
+            text.fontSize = size;
+            text.alignment = anchor;
+            text.color = Color.white;
+            text.raycastTarget = false;
+
+            // A dark outline, so white text stays readable over a bright street
+            // as well as over shadow.
+            Outline outline = label.AddComponent<Outline>();
+            outline.effectColor = new Color(0f, 0f, 0f, 0.75f);
+            outline.effectDistance = new Vector2(1.5f, -1.5f);
+
+            return text;
+        }
+
+        private static void Place(RectTransform rect, Vector2 anchor, Vector2 position, Vector2 size)
+        {
+            rect.anchorMin = anchor;
+            rect.anchorMax = anchor;
+            rect.pivot = anchor;
+            rect.anchoredPosition = position;
+            rect.sizeDelta = size;
         }
 
         private static void Stretch(RectTransform rect)
@@ -697,7 +778,7 @@ namespace BarafPaani.EditorTools
             string[] generated =
             {
                 "Ground", "Map", "ArenaWalls", "PlayerFollowCamera", "NetworkManager",
-                "HUD", "MinimapCamera"
+                "HUD", "MinimapCamera", "Match"
             };
 
             foreach (GameObject root in scene.GetRootGameObjects())
