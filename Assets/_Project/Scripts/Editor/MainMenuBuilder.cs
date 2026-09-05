@@ -30,7 +30,6 @@ namespace BarafPaani.EditorTools
         [MenuItem("Baraf-Paani/Rebuild Main Menu")]
         public static void Rebuild()
         {
-            MatchSetup setup = EnsureSetup();
             Font font = AssetDatabase.LoadAssetAtPath<Font>(FontPath);
 
             if (font == null)
@@ -88,6 +87,19 @@ namespace BarafPaani.EditorTools
                 Sprite("Quitbtn_Rectangle_56.png"));
 
             MenuController controller = canvasObject.AddComponent<MenuController>();
+
+            // Loaded here, not before the scene was created. NewScene unloads
+            // unused assets, and an asset held only by a local variable goes
+            // with them — leaving a destroyed reference that assigns as null
+            // without complaining. That shipped a menu whose buttons all
+            // reported having no MatchSetup.
+            MatchSetup setup = EnsureSetup();
+
+            if (setup == null)
+            {
+                Debug.LogError(
+                    $"No MatchSetup at {SetupPath}, so the menu will not be able to start anything.");
+            }
 
             SerializedObject state = new SerializedObject(controller);
             state.FindProperty("_setup").objectReferenceValue = setup;

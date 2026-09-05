@@ -6,7 +6,9 @@
         "Mirror",
         "Mirror.Components",
         "Mirror.Transports",
-        "UnityEngine.TestRunner"
+        "UnityEngine.TestRunner",
+        "UnityEngine.UI",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
