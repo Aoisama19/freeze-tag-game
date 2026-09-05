@@ -46,6 +46,8 @@ namespace BarafPaani.EditorTools
         private const string MapPrefabPath =
             "Assets/_Project/Art/Maps/3Talwaar/Prefab/3 Talwaar v4.prefab";
 
+        private const string NavMeshAssetPath = "Assets/_Project/Scenes/GameNavMesh.asset";
+
         /// <summary>
         /// The playable square, cut down from 3 Talwaar's full 537x464 metres.
         /// The original walled off roughly 251x198 with road barriers, which is a
@@ -332,12 +334,18 @@ namespace BarafPaani.EditorTools
         /// </summary>
         private static void BuildSpawnPoints(NavMeshSurface surface)
         {
-            // Bake now purely so positions can be sampled against real
-            // navigation data. The runtime bake still happens on the server, and
-            // this one is thrown away at the end of the method — leaving it in
-            // place embeds NavMeshData in the scene, which is a binary blob and
-            // turns the whole scene file binary. That kills diffs and the
-            // SmartMerge setup in .gitattributes.
+            // Bake here, at edit time, and keep the result as its own asset.
+            //
+            // Baking at runtime instead looked tidier but does not survive a
+            // build: RuntimeNavMeshBuilder needs Read/Write enabled on every
+            // source mesh, and 3 Talwaar's are not readable. Unity says as much
+            // — "will work in playmode in the editor but not in player" — so the
+            // shipped game would have had no navigation and the AI would not
+            // have moved at all.
+            //
+            // The data has to live in its own asset file rather than inside the
+            // scene. Left embedded, that binary blob turns the whole scene file
+            // binary, which kills diffs and the SmartMerge setup.
             surface.BuildNavMesh();
 
             int placed = 0;
@@ -380,11 +388,32 @@ namespace BarafPaani.EditorTools
                 placed++;
             }
 
-            // Throw the sampling bake away, so the scene saves as text.
-            surface.RemoveData();
-            surface.navMeshData = null;
+            SaveNavMesh(surface);
 
             Debug.Log($"Spawn points placed on the NavMesh: {placed} of {SpawnPointCount}.");
+        }
+
+        /// <summary>
+        /// Writes the baked navigation out as its own asset and points the
+        /// surface at it, so the scene stores a reference rather than the data.
+        /// </summary>
+        private static void SaveNavMesh(NavMeshSurface surface)
+        {
+            NavMeshData data = surface.navMeshData;
+
+            if (data == null)
+            {
+                Debug.LogError("NavMesh bake produced nothing, so the AI will have nowhere to walk.");
+                return;
+            }
+
+            AssetDatabase.DeleteAsset(NavMeshAssetPath);
+            AssetDatabase.CreateAsset(data, NavMeshAssetPath);
+            AssetDatabase.SaveAssets();
+
+            surface.navMeshData = AssetDatabase.LoadAssetAtPath<NavMeshData>(NavMeshAssetPath);
+
+            Debug.Log($"NavMesh baked to {NavMeshAssetPath}.");
         }
 
         /// <summary>

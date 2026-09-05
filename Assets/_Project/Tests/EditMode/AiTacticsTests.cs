@@ -11,6 +11,7 @@ namespace BarafPaani.Tests
     public class AiTacticsTests
     {
         private const float Danger = 9f;
+        private const float Safe = 15f;
 
         // ----- catcher -------------------------------------------------------
 
@@ -65,7 +66,7 @@ namespace BarafPaani.Tests
         {
             Assert.AreEqual(
                 RunnerIntent.Flee,
-                AiTactics.ChooseRunnerIntent(true, 3f, Danger, false));
+                AiTactics.ChooseRunnerIntent(RunnerIntent.Wander, true, 3f, Danger, Safe, false));
         }
 
         [Test]
@@ -73,7 +74,7 @@ namespace BarafPaani.Tests
         {
             Assert.AreEqual(
                 RunnerIntent.Flee,
-                AiTactics.ChooseRunnerIntent(true, 3f, Danger, true));
+                AiTactics.ChooseRunnerIntent(RunnerIntent.Rescue, true, 3f, Danger, Safe, true));
         }
 
         [Test]
@@ -81,7 +82,7 @@ namespace BarafPaani.Tests
         {
             Assert.AreEqual(
                 RunnerIntent.Rescue,
-                AiTactics.ChooseRunnerIntent(true, 20f, Danger, true));
+                AiTactics.ChooseRunnerIntent(RunnerIntent.Wander, true, 20f, Danger, Safe, true));
         }
 
         [Test]
@@ -89,7 +90,7 @@ namespace BarafPaani.Tests
         {
             Assert.AreEqual(
                 RunnerIntent.Flee,
-                AiTactics.ChooseRunnerIntent(true, Danger, Danger, true));
+                AiTactics.ChooseRunnerIntent(RunnerIntent.Wander, true, Danger, Danger, Safe, true));
         }
 
         [Test]
@@ -97,7 +98,7 @@ namespace BarafPaani.Tests
         {
             Assert.AreEqual(
                 RunnerIntent.Rescue,
-                AiTactics.ChooseRunnerIntent(false, float.MaxValue, Danger, true));
+                AiTactics.ChooseRunnerIntent(RunnerIntent.Wander, false, float.MaxValue, Danger, Safe, true));
         }
 
         [Test]
@@ -105,7 +106,7 @@ namespace BarafPaani.Tests
         {
             Assert.AreEqual(
                 RunnerIntent.Wander,
-                AiTactics.ChooseRunnerIntent(false, float.MaxValue, Danger, false));
+                AiTactics.ChooseRunnerIntent(RunnerIntent.Wander, false, float.MaxValue, Danger, Safe, false));
         }
 
         [Test]
@@ -115,7 +116,45 @@ namespace BarafPaani.Tests
             // over the frozen one. Walking in anyway just feeds it another runner.
             Assert.AreEqual(
                 RunnerIntent.Wander,
-                AiTactics.ChooseRunnerIntent(true, 20f, Danger, false));
+                AiTactics.ChooseRunnerIntent(RunnerIntent.Wander, true, 20f, Danger, Safe, false));
+        }
+        [Test]
+        public void A_fleeing_runner_keeps_running_until_it_is_genuinely_clear()
+        {
+            // Between danger and safe, a runner already fleeing stays fleeing.
+            // Without this it turns back the moment the catcher is a hair out of
+            // danger range, then flees again, and dithers on the spot.
+            Assert.AreEqual(
+                RunnerIntent.Flee,
+                AiTactics.ChooseRunnerIntent(RunnerIntent.Flee, true, 12f, Danger, Safe, true));
+        }
+
+        [Test]
+        public void A_runner_that_was_not_fleeing_does_not_start_at_the_same_distance()
+        {
+            // Same distance as the test above, different previous decision. That
+            // gap is the whole point of the hysteresis.
+            Assert.AreEqual(
+                RunnerIntent.Rescue,
+                AiTactics.ChooseRunnerIntent(RunnerIntent.Wander, true, 12f, Danger, Safe, true));
+        }
+
+        [Test]
+        public void A_fleeing_runner_goes_back_to_rescuing_once_past_the_safe_distance()
+        {
+            Assert.AreEqual(
+                RunnerIntent.Rescue,
+                AiTactics.ChooseRunnerIntent(RunnerIntent.Flee, true, Safe + 1f, Danger, Safe, true));
+        }
+
+        [Test]
+        public void A_remembered_catcher_is_still_worth_fleeing_from()
+        {
+            // catcherKnown covers memory as well as sight, so a catcher that has
+            // just stepped behind a building is not instantly forgotten.
+            Assert.AreEqual(
+                RunnerIntent.Flee,
+                AiTactics.ChooseRunnerIntent(RunnerIntent.Wander, true, 4f, Danger, Safe, true));
         }
     }
 }

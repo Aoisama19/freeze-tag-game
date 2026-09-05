@@ -269,6 +269,8 @@ MonoBehaviour:
   _arriveDistance: 1.5
   _dangerDistance: 9
   _fleeDistance: 14
+  _safeDistance: 15
+  _catcherMemorySeconds: 4
   _rescueAbortDistance: 5
   _guardSeconds: 6
   _guardBreakSeconds: 6

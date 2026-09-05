@@ -51,6 +51,16 @@ namespace BarafPaani.AI
         private float _fleeDistance = 14f;
 
         [SerializeField]
+        [Tooltip("A fleeing runner keeps running until the catcher is at least this far away. " +
+                 "Must exceed the danger distance; the gap is what stops it dithering.")]
+        private float _safeDistance = 15f;
+
+        [SerializeField]
+        [Tooltip("Seconds a runner keeps believing in a catcher it can no longer see. " +
+                 "Without this it forgets the moment the catcher leaves its view cone.")]
+        private float _catcherMemorySeconds = 4f;
+
+        [SerializeField]
         [Tooltip("Skip a rescue if the frozen team-mate is this close to a visible catcher.")]
         private float _rescueAbortDistance = 5f;
 
@@ -78,6 +88,12 @@ namespace BarafPaani.AI
         private Transform _visibleQuarry;
         private Transform _visibleCatcher;
         private Transform _frozenCharacter;
+
+        // Where the catcher was last seen, and when. Lets a runner keep running
+        // from a threat that has just stepped behind a building instead of
+        // instantly relaxing.
+        private Vector3 _lastKnownCatcherPosition;
+        private float _lastCatcherSeenAt = float.NegativeInfinity;
 
         private float _nextScanTime;
         private float _guardStartedAt;
@@ -165,17 +181,25 @@ namespace BarafPaani.AI
 
             if (_role.Role == Role.Catcher)
             {
-                // Seen, not known: it has to spot a runner to chase one.
-                _visibleQuarry = _vision != null
-                    ? _vision.FindNearestVisible(_acceptApproachTarget)
-                    : null;
+                // Known, not seen. A catcher restricted to a 14 metre view cone
+                // on a 120 metre map spends the game wandering past people, and
+                // only notices anyone who happens to walk into the cone — which
+                // plays as a broken opponent rather than a fair one.
+                _visibleQuarry = ServerCharacters.FindNearest(here, transform, _acceptApproachTarget);
 
                 _frozenCharacter = ServerCharacters.FindNearest(here, transform, _acceptFrozenRunner);
                 return;
             }
 
-            // A runner has to actually see the catcher to be afraid of it.
+            // A runner still has to actually see the catcher to be afraid of it,
+            // but it remembers for a few seconds afterwards.
             _visibleCatcher = _vision != null ? _vision.FindNearestVisible(_acceptCatcher) : null;
+
+            if (_visibleCatcher != null)
+            {
+                _lastKnownCatcherPosition = _visibleCatcher.position;
+                _lastCatcherSeenAt = Time.time;
+            }
 
             // Known, not seen: frozen team-mates are calling out, and their state
             // is replicated to everyone regardless.
@@ -236,15 +260,19 @@ namespace BarafPaani.AI
 
         private void TickRunner()
         {
-            float catcherDistance = _visibleCatcher != null
-                ? Vector3.Distance(transform.position, _visibleCatcher.position)
+            bool catcherKnown = TryGetKnownCatcherPosition(out Vector3 catcherPosition);
+
+            float catcherDistance = catcherKnown
+                ? Vector3.Distance(transform.position, catcherPosition)
                 : float.MaxValue;
 
             _runnerIntent = AiTactics.ChooseRunnerIntent(
-                _visibleCatcher != null,
+                _runnerIntent,
+                catcherKnown,
                 catcherDistance,
                 _dangerDistance,
-                HasReachableFrozenAlly());
+                _safeDistance,
+                HasReachableFrozenAlly(catcherKnown, catcherPosition));
 
             switch (_runnerIntent)
             {
@@ -263,29 +291,57 @@ namespace BarafPaani.AI
         }
 
         /// <summary>
+        /// Where the catcher is, as far as this runner is concerned: seen right
+        /// now, or seen recently enough to still act on.
+        /// </summary>
+        private bool TryGetKnownCatcherPosition(out Vector3 position)
+        {
+            if (_visibleCatcher != null)
+            {
+                position = _visibleCatcher.position;
+                return true;
+            }
+
+            if (Time.time - _lastCatcherSeenAt <= _catcherMemorySeconds)
+            {
+                position = _lastKnownCatcherPosition;
+                return true;
+            }
+
+            position = Vector3.zero;
+            return false;
+        }
+
+        /// <summary>
         /// A frozen team-mate is only worth going for if the catcher is not
         /// standing over them. Walking into a guarded rescue just hands the
         /// catcher another runner.
         /// </summary>
-        private bool HasReachableFrozenAlly()
+        private bool HasReachableFrozenAlly(bool catcherKnown, Vector3 catcherPosition)
         {
             if (_frozenCharacter == null)
             {
                 return false;
             }
 
-            if (_visibleCatcher == null)
+            if (!catcherKnown)
             {
                 return true;
             }
 
-            float guarded = (_frozenCharacter.position - _visibleCatcher.position).sqrMagnitude;
+            float guarded = (_frozenCharacter.position - catcherPosition).sqrMagnitude;
             return guarded > _rescueAbortDistance * _rescueAbortDistance;
         }
 
         private void Flee()
         {
-            Vector3 away = transform.position - _visibleCatcher.position;
+            if (!TryGetKnownCatcherPosition(out Vector3 catcherPosition))
+            {
+                Wander();
+                return;
+            }
+
+            Vector3 away = transform.position - catcherPosition;
             away.y = 0f;
 
             Vector3 direction = away.sqrMagnitude > 0.01f ? away.normalized : transform.forward;

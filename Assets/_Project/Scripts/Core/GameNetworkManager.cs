@@ -101,7 +101,7 @@ namespace BarafPaani.Core
         {
             base.OnStartServer();
 
-            BuildNavMeshes();
+            CheckNavMeshes();
 
             // Single-player is a host with nobody else in it, so the AI has to
             // provide the opposition. Multiplayer gets AI later, once we know
@@ -113,14 +113,19 @@ namespace BarafPaani.Core
         }
 
         /// <summary>
-        /// Bakes the map's NavMesh before any agent spawns.
+        /// Checks the map came with navigation attached, rather than baking it.
         ///
-        /// Done at runtime rather than committed as a baked asset: only the
-        /// server needs one, it cannot go stale against the geometry, and it
-        /// keeps a binary out of the repo. Worth revisiting for the real maps,
-        /// where bake time will matter more than it does on a flat plane.
+        /// This used to call BuildNavMesh at server start, which worked in the
+        /// editor and silently would not have worked in a build: runtime baking
+        /// needs Read/Write enabled on every source mesh, and the map's are not
+        /// readable. Unity warns about exactly this — "will work in playmode in
+        /// the editor but not in player" — and the shipped game would have had
+        /// no navigation at all, so the AI would simply have stood still.
+        ///
+        /// The bake is done once at edit time by the scene builder and committed
+        /// as an asset. All that is left to do here is notice if it is missing.
         /// </summary>
-        private static void BuildNavMeshes()
+        private static void CheckNavMeshes()
         {
             NavMeshSurface[] surfaces =
                 FindObjectsByType<NavMeshSurface>(FindObjectsSortMode.None);
@@ -133,7 +138,12 @@ namespace BarafPaani.Core
 
             foreach (NavMeshSurface surface in surfaces)
             {
-                surface.BuildNavMesh();
+                if (surface.navMeshData == null)
+                {
+                    Debug.LogError(
+                        $"'{surface.name}' has no baked NavMesh. Run " +
+                        "Baraf-Paani > Rebuild Playable Scene.", surface);
+                }
             }
         }
 
