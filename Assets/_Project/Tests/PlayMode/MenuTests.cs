@@ -103,6 +103,46 @@ namespace BarafPaani.Tests
             {
                 Assert.IsNotNull(Field<Button>(menu, name), $"{name} is not wired up");
             }
+
+            Assert.IsNotNull(Field<Toggle>(menu, "_fillWithBotsToggle"), "no bot toggle");
+            Assert.IsNotNull(Field<InputField>(menu, "_botCountField"), "no bot count field");
+        }
+
+        [UnityTest]
+        public IEnumerator Turning_bots_off_is_carried_into_the_match()
+        {
+            yield return LoadMenu();
+
+            MenuController menu = Object.FindFirstObjectByType<MenuController>();
+            MatchSetup setup = Field<MatchSetup>(menu, "_setup");
+
+            Field<Toggle>(menu, "_fillWithBotsToggle").isOn = false;
+            Field<Button>(menu, "_hostButton").onClick.Invoke();
+
+            Assert.IsFalse(setup.FillWithBots, "the match should have been told to use no bots");
+            Assert.AreEqual(GameMode.Multiplayer, setup.Mode);
+
+            setup.ClearRequest();
+        }
+
+        [UnityTest]
+        public IEnumerator A_bot_count_over_the_limit_is_pulled_back()
+        {
+            yield return LoadMenu();
+
+            MenuController menu = Object.FindFirstObjectByType<MenuController>();
+            MatchSetup setup = Field<MatchSetup>(menu, "_setup");
+
+            Field<Toggle>(menu, "_fillWithBotsToggle").isOn = true;
+            Field<InputField>(menu, "_botCountField").text = "99";
+            Field<Button>(menu, "_singlePlayerButton").onClick.Invoke();
+
+            Assert.AreEqual(
+                MatchSetup.MaxBotRunners,
+                setup.BotRunners,
+                "a number past the limit should be clamped, not taken at face value");
+
+            setup.ClearRequest();
         }
 
         [UnityTest]

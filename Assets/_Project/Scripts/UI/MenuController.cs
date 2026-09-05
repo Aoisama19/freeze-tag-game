@@ -29,6 +29,16 @@ namespace BarafPaani.UI
         [SerializeField]
         private Text _roleLabel;
 
+        [Header("Bots")]
+        [SerializeField]
+        private Toggle _fillWithBotsToggle;
+
+        [SerializeField]
+        private InputField _botCountField;
+
+        [SerializeField]
+        private Text _botsLabel;
+
         [Header("Play")]
         [SerializeField]
         private Button _singlePlayerButton;
@@ -76,7 +86,54 @@ namespace BarafPaani.UI
 
             Wire(_quitButton, Quit);
 
+            if (_fillWithBotsToggle != null)
+            {
+                _fillWithBotsToggle.isOn = _setup == null || _setup.FillWithBots;
+                _fillWithBotsToggle.onValueChanged.RemoveAllListeners();
+                _fillWithBotsToggle.onValueChanged.AddListener(_ => ShowBots());
+            }
+
+            if (_botCountField != null)
+            {
+                _botCountField.contentType = InputField.ContentType.IntegerNumber;
+                _botCountField.text = (_setup != null ? _setup.BotRunners : 3).ToString();
+                _botCountField.onEndEdit.RemoveAllListeners();
+
+                // Clamped as it is typed, so the field cannot hold a number the
+                // match would refuse anyway.
+                _botCountField.onEndEdit.AddListener(_ => _botCountField.text = BotCount().ToString());
+            }
+
             ShowRole();
+            ShowBots();
+        }
+
+        /// <summary>How many runners the match should aim for, kept in range.</summary>
+        private int BotCount()
+        {
+            if (_botCountField == null || !int.TryParse(_botCountField.text, out int count))
+            {
+                return 3;
+            }
+
+            return Mathf.Clamp(count, 0, MatchSetup.MaxBotRunners);
+        }
+
+        private void ShowBots()
+        {
+            bool fill = _fillWithBotsToggle == null || _fillWithBotsToggle.isOn;
+
+            if (_botCountField != null)
+            {
+                _botCountField.interactable = fill;
+            }
+
+            if (_botsLabel != null)
+            {
+                _botsLabel.text = fill
+                    ? $"Runners to fill (max {MatchSetup.MaxBotRunners})"
+                    : "No bots — people only";
+            }
         }
 
         private static void Wire(Button button, UnityEngine.Events.UnityAction action)
@@ -135,7 +192,14 @@ namespace BarafPaani.UI
             // A joiner never picks a side: whoever is hosting hands roles out.
             Role role = mode == GameMode.MultiplayerJoin ? Role.Runner : _role;
 
-            _setup.Request(mode, role, _addressField != null ? _addressField.text : null);
+            bool fill = _fillWithBotsToggle == null || _fillWithBotsToggle.isOn;
+
+            _setup.Request(
+                mode,
+                role,
+                fill,
+                BotCount(),
+                _addressField != null ? _addressField.text : null);
             SceneManager.LoadScene(_gameScene, LoadSceneMode.Single);
         }
 

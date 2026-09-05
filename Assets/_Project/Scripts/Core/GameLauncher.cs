@@ -30,6 +30,8 @@ namespace BarafPaani.Core
             GameMode mode = _setup.Mode;
             string address = _setup.JoinAddress;
             manager.HumanRole = _setup.HumanRole;
+            manager.FillWithBots = _setup.FillWithBots;
+            manager.TargetRunners = _setup.BotRunners;
             _setup.ClearRequest();
 
             switch (mode)

@@ -33,6 +33,27 @@ namespace BarafPaani.Core
         private int _targetRunners = 3;
 
         [SerializeField]
+        [Tooltip("Off means no AI at all — the match is whoever turns up.")]
+        private bool _fillWithBots = true;
+
+        /// <summary>
+        /// Whether bots make up the numbers. Settable so the menu can decide it
+        /// before the host comes up.
+        /// </summary>
+        public bool FillWithBots
+        {
+            get => _fillWithBots;
+            set => _fillWithBots = value;
+        }
+
+        /// <summary>Runners a match aims for, humans and bots together.</summary>
+        public int TargetRunners
+        {
+            get => _targetRunners;
+            set => _targetRunners = Mathf.Clamp(value, 0, MatchSetup.MaxBotRunners);
+        }
+
+        [SerializeField]
         [Tooltip("Which side you play. Set it to Runner and an AI takes the catcher role, " +
                  "so the chasing and guarding behaviour can be watched from the other side.")]
         private Role _humanRole = Role.Catcher;
@@ -182,6 +203,15 @@ namespace BarafPaani.Core
         /// </summary>
         private void FillWithAi()
         {
+            if (!_fillWithBots)
+            {
+                // Asked for a match of people only. Say so once if that has left
+                // nobody catching, rather than letting a dead match look like a
+                // bug later.
+                WarnIfNobodyIsCatching();
+                return;
+            }
+
             if (_aiCharacterPrefab == null)
             {
                 Debug.LogWarning("No AI character prefab is set, so nobody can be caught.", this);
@@ -232,6 +262,27 @@ namespace BarafPaani.Core
                 spareBots.RemoveAt(spareBots.Count - 1);
                 NetworkServer.Destroy(bot.gameObject);
             }
+        }
+
+        /// <summary>
+        /// With bots off, only a human can catch — and right now only the first
+        /// player into a match gets to choose a side, so a host who picked Runner
+        /// leaves a match nobody can lose.
+        /// </summary>
+        private static void WarnIfNobodyIsCatching()
+        {
+            foreach (NetworkIdentity identity in NetworkServer.spawned.Values)
+            {
+                if (identity != null
+                    && identity.TryGetComponent(out PlayerRole role)
+                    && role.Role == Role.Catcher)
+                {
+                    return;
+                }
+            }
+
+            Debug.LogWarning(
+                "Bots are off and nobody is the catcher, so this match cannot be won.");
         }
 
         private void SpawnAiCharacter(Role role, string name)

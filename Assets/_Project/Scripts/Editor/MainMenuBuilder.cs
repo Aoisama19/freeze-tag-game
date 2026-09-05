@@ -82,6 +82,15 @@ namespace BarafPaani.EditorTools
 
             InputField address = MakeAddressField(canvasObject, font);
 
+            Toggle botsToggle = MakeToggle(canvasObject, font, "FillWithBotsToggle", "FILL WITH BOTS",
+                new Vector2(-150f, 60f));
+
+            Text botsLabel = MakeText(canvasObject, "BotsLabel", font, 20, TextAnchor.MiddleRight);
+            Place(botsLabel.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(90f, 60f),
+                new Vector2(300f, 30f));
+
+            InputField botCount = MakeNumberField(canvasObject, font);
+
             Button quit = MakeButton(canvasObject, "QuitButton", font, "QUIT",
                 new Vector2(0.5f, 0f), new Vector2(0f, 70f), new Vector2(220f, 60f),
                 Sprite("Quitbtn_Rectangle_56.png"));
@@ -110,6 +119,9 @@ namespace BarafPaani.EditorTools
             state.FindProperty("_hostButton").objectReferenceValue = host;
             state.FindProperty("_joinButton").objectReferenceValue = join;
             state.FindProperty("_addressField").objectReferenceValue = address;
+            state.FindProperty("_fillWithBotsToggle").objectReferenceValue = botsToggle;
+            state.FindProperty("_botCountField").objectReferenceValue = botCount;
+            state.FindProperty("_botsLabel").objectReferenceValue = botsLabel;
             state.FindProperty("_quitButton").objectReferenceValue = quit;
             state.ApplyModifiedPropertiesWithoutUndo();
 
@@ -254,6 +266,89 @@ namespace BarafPaani.EditorTools
             text.text = label;
 
             return control;
+        }
+
+        /// <summary>
+        /// A checkbox. Built by hand because a Toggle needs its background and
+        /// checkmark wiring, which nothing does for you from code.
+        /// </summary>
+        private static Toggle MakeToggle(
+            GameObject canvas, Font font, string name, string label, Vector2 position)
+        {
+            GameObject root = new GameObject(name);
+            root.transform.SetParent(canvas.transform, false);
+
+            RectTransform rect = root.AddComponent<RectTransform>();
+            Place(rect, new Vector2(0.5f, 0.5f), position, new Vector2(280f, 40f));
+
+            GameObject box = new GameObject("Box");
+            box.transform.SetParent(root.transform, false);
+
+            RectTransform boxRect = box.AddComponent<RectTransform>();
+            boxRect.anchorMin = new Vector2(0f, 0.5f);
+            boxRect.anchorMax = new Vector2(0f, 0.5f);
+            boxRect.pivot = new Vector2(0f, 0.5f);
+            boxRect.anchoredPosition = new Vector2(0f, 0f);
+            boxRect.sizeDelta = new Vector2(28f, 28f);
+
+            Image background = box.AddComponent<Image>();
+            background.color = new Color(0f, 0f, 0f, 0.6f);
+
+            GameObject tick = new GameObject("Tick");
+            tick.transform.SetParent(box.transform, false);
+
+            RectTransform tickRect = tick.AddComponent<RectTransform>();
+            tickRect.anchorMin = Vector2.zero;
+            tickRect.anchorMax = Vector2.one;
+            tickRect.offsetMin = new Vector2(5f, 5f);
+            tickRect.offsetMax = new Vector2(-5f, -5f);
+
+            Image tickImage = tick.AddComponent<Image>();
+            tickImage.color = new Color(1f, 0.85f, 0.3f);
+
+            Text caption = MakeText(root, "Label", font, 20, TextAnchor.MiddleLeft);
+            RectTransform captionRect = caption.rectTransform;
+            captionRect.anchorMin = new Vector2(0f, 0f);
+            captionRect.anchorMax = new Vector2(1f, 1f);
+            captionRect.offsetMin = new Vector2(38f, 0f);
+            captionRect.offsetMax = Vector2.zero;
+            caption.text = label;
+
+            Toggle toggle = root.AddComponent<Toggle>();
+            toggle.targetGraphic = background;
+            toggle.graphic = tickImage;
+            toggle.isOn = true;
+
+            return toggle;
+        }
+
+        private static InputField MakeNumberField(GameObject canvas, Font font)
+        {
+            GameObject field = new GameObject("BotCountField");
+            field.transform.SetParent(canvas.transform, false);
+
+            RectTransform rect = field.AddComponent<RectTransform>();
+            Place(rect, new Vector2(0.5f, 0.5f), new Vector2(280f, 60f), new Vector2(80f, 40f));
+
+            Image image = field.AddComponent<Image>();
+            image.color = new Color(0f, 0f, 0f, 0.55f);
+
+            Text text = MakeText(field, "Text", font, 22, TextAnchor.MiddleCenter);
+            RectTransform textRect = text.rectTransform;
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = new Vector2(8f, 4f);
+            textRect.offsetMax = new Vector2(-8f, -4f);
+            text.supportRichText = false;
+
+            InputField input = field.AddComponent<InputField>();
+            input.targetGraphic = image;
+            input.textComponent = text;
+            input.contentType = InputField.ContentType.IntegerNumber;
+            input.characterLimit = 1;
+            input.text = "3";
+
+            return input;
         }
 
         private static InputField MakeAddressField(GameObject canvas, Font font)

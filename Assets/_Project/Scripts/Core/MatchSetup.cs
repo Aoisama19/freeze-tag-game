@@ -25,9 +25,20 @@ namespace BarafPaani.Core
         private string _joinAddress = "localhost";
 
         [SerializeField]
+        [Tooltip("Off means no AI at all — the match is whoever turns up.")]
+        private bool _fillWithBots = true;
+
+        [SerializeField]
+        [Tooltip("Runners a match aims for, humans and bots together.")]
+        private int _botRunners = 3;
+
+        [SerializeField]
         [Tooltip("Set by the menu, cleared by the game scene once acted on. Without it, " +
                  "opening the game scene directly would start a match nobody asked for.")]
         private bool _launchRequested;
+
+        /// <summary>Most bots a match will take. Keeps a typed-in number sane.</summary>
+        public const int MaxBotRunners = 8;
 
         public GameMode Mode => _mode;
 
@@ -35,13 +46,24 @@ namespace BarafPaani.Core
 
         public string JoinAddress => _joinAddress;
 
+        public bool FillWithBots => _fillWithBots;
+
+        public int BotRunners => _botRunners;
+
         public bool LaunchRequested => _launchRequested;
 
         /// <summary>Records a choice and asks the game scene to act on it.</summary>
-        public void Request(GameMode mode, Role humanRole, string joinAddress = null)
+        public void Request(
+            GameMode mode,
+            Role humanRole,
+            bool fillWithBots,
+            int botRunners,
+            string joinAddress = null)
         {
             _mode = mode;
             _humanRole = humanRole;
+            _fillWithBots = fillWithBots;
+            _botRunners = Mathf.Clamp(botRunners, 0, MaxBotRunners);
 
             if (!string.IsNullOrWhiteSpace(joinAddress))
             {
