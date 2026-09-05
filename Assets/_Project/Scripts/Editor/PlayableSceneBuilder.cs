@@ -1,6 +1,7 @@
 using BarafPaani.AI;
 using BarafPaani.Core;
 using BarafPaani.Gameplay;
+using BarafPaani.UI;
 using kcp2k;
 using Mirror;
 using Unity.AI.Navigation;
@@ -10,6 +11,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 namespace BarafPaani.EditorTools
 {
@@ -48,8 +50,25 @@ namespace BarafPaani.EditorTools
 
         private const string NavMeshAssetPath = "Assets/_Project/Scenes/GameNavMesh.asset";
 
+        private const string MinimapTexturePath =
+            "Assets/_Project/Scenes/MinimapTexture.renderTexture";
+
         /// <summary>Layer the map geometry sits on, so it can block sight.</summary>
         private const string MapLayerName = "MapGeometry";
+
+        /// <summary>Resolution of the minimap's render texture.</summary>
+        private const int MinimapTextureSize = 512;
+
+        /// <summary>On-screen size of the minimap panel, in canvas units.</summary>
+        private const float MinimapPanelSize = 220f;
+
+        private const float BlipSize = 10f;
+
+        /// <summary>
+        /// High enough to clear the tallest building, so the map camera looks
+        /// down on roofs rather than starting inside one.
+        /// </summary>
+        private const float MinimapCameraHeight = 80f;
 
         /// <summary>
         /// The playable square, cut down from 3 Talwaar's full 537x464 metres.
@@ -266,6 +285,7 @@ namespace BarafPaani.EditorTools
 
             BuildCamera();
             BuildNetworkManager(playerPrefab, aiPrefab);
+            BuildHud();
             BuildSpawnPoints(surface);
 
             EditorSceneManager.MarkSceneDirty(scene);
@@ -416,6 +436,103 @@ namespace BarafPaani.EditorTools
             Debug.Log($"Spawn points placed on the NavMesh: {placed} of {SpawnPointCount}.");
         }
 
+
+        /// <summary>
+        /// Builds the on-screen minimap: a top-down camera rendering the arena
+        /// to a texture, with blips drawn over it.
+        ///
+        /// A live camera rather than a baked image, so the map cannot go stale
+        /// against the geometry and costs nothing to keep in step when the arena
+        /// changes. It renders the map layer only — characters are blips, and
+        /// drawing them twice would just be noise.
+        /// </summary>
+        private static void BuildHud()
+        {
+            int mapLayer = EnsureMapLayer();
+
+            // Saved as an asset, not just newed up: a RenderTexture created in
+            // code does not serialise into the scene, so the camera and the
+            // RawImage would both come back pointing at nothing and the map
+            // would render black.
+            RenderTexture texture = new RenderTexture(MinimapTextureSize, MinimapTextureSize, 16)
+            {
+                name = "MinimapTexture"
+            };
+
+            AssetDatabase.DeleteAsset(MinimapTexturePath);
+            AssetDatabase.CreateAsset(texture, MinimapTexturePath);
+            AssetDatabase.SaveAssets();
+
+            texture = AssetDatabase.LoadAssetAtPath<RenderTexture>(MinimapTexturePath);
+
+            GameObject cameraObject = new GameObject("MinimapCamera");
+            cameraObject.transform.position =
+                ArenaCentre + new Vector3(0f, MinimapCameraHeight, 0f);
+            cameraObject.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+
+            Camera mapCamera = cameraObject.AddComponent<Camera>();
+            mapCamera.orthographic = true;
+            mapCamera.orthographicSize = ArenaSize * 0.5f;
+            mapCamera.cullingMask = 1 << mapLayer;
+            mapCamera.clearFlags = CameraClearFlags.SolidColor;
+            mapCamera.backgroundColor = new Color(0.08f, 0.09f, 0.11f);
+            mapCamera.targetTexture = texture;
+
+            // Off the main camera's stack: this one only ever feeds the texture.
+            mapCamera.depth = -10;
+
+            GameObject hud = new GameObject("HUD");
+            Canvas canvas = hud.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            hud.AddComponent<CanvasScaler>().uiScaleMode =
+                CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            hud.AddComponent<GraphicRaycaster>();
+
+            GameObject panel = new GameObject("Minimap");
+            panel.transform.SetParent(hud.transform, false);
+
+            RectTransform panelRect = panel.AddComponent<RectTransform>();
+
+            // Top-right corner, inset a little.
+            panelRect.anchorMin = new Vector2(1f, 1f);
+            panelRect.anchorMax = new Vector2(1f, 1f);
+            panelRect.pivot = new Vector2(1f, 1f);
+            panelRect.anchoredPosition = new Vector2(-16f, -16f);
+            panelRect.sizeDelta = new Vector2(MinimapPanelSize, MinimapPanelSize);
+
+            RawImage background = panel.AddComponent<RawImage>();
+            background.texture = texture;
+
+            GameObject blipArea = new GameObject("Blips");
+            blipArea.transform.SetParent(panel.transform, false);
+
+            RectTransform blipRect = blipArea.AddComponent<RectTransform>();
+            blipRect.anchorMin = Vector2.zero;
+            blipRect.anchorMax = Vector2.one;
+            blipRect.offsetMin = Vector2.zero;
+            blipRect.offsetMax = Vector2.zero;
+
+            GameObject blipPrefab = new GameObject("Blip");
+            blipPrefab.transform.SetParent(blipArea.transform, false);
+
+            RectTransform blipPrefabRect = blipPrefab.AddComponent<RectTransform>();
+            blipPrefabRect.sizeDelta = new Vector2(BlipSize, BlipSize);
+
+            Image blipImage = blipPrefab.AddComponent<Image>();
+            blipImage.enabled = false;
+
+            MinimapView view = hud.AddComponent<MinimapView>();
+
+            SerializedObject viewState = new SerializedObject(view);
+            viewState.FindProperty("_blipArea").objectReferenceValue = blipRect;
+            viewState.FindProperty("_blipPrefab").objectReferenceValue = blipImage;
+            viewState.FindProperty("_arenaCentre").vector3Value = ArenaCentre;
+            viewState.FindProperty("_arenaSize").floatValue = ArenaSize;
+            viewState.ApplyModifiedPropertiesWithoutUndo();
+
+            Debug.Log("HUD: minimap built.");
+        }
+
         /// <summary>
         /// Adds sight, with the map set as the thing that blocks it.
         ///
@@ -510,7 +627,11 @@ namespace BarafPaani.EditorTools
         /// </summary>
         private static void ClearGenerated(Scene scene)
         {
-            string[] generated = { "Ground", "Map", "ArenaWalls", "PlayerFollowCamera", "NetworkManager" };
+            string[] generated =
+            {
+                "Ground", "Map", "ArenaWalls", "PlayerFollowCamera", "NetworkManager",
+                "HUD", "MinimapCamera"
+            };
 
             foreach (GameObject root in scene.GetRootGameObjects())
             {

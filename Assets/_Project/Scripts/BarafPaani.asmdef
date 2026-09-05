@@ -6,7 +6,8 @@
         "Mirror.Components",
         "Unity.Cinemachine",
         "Unity.InputSystem",
-        "Unity.AI.Navigation"
+        "Unity.AI.Navigation",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
