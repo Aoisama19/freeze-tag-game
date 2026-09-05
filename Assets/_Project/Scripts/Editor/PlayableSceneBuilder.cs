@@ -60,15 +60,17 @@ namespace BarafPaani.EditorTools
         private const int MinimapTextureSize = 512;
 
         /// <summary>On-screen size of the minimap panel, in canvas units.</summary>
-        private const float MinimapPanelSize = 150f;
+        private const float MinimapPanelSize = 200f;
 
         private const float BlipSize = 9f;
 
         /// <summary>
-        /// Map is framed slightly wider than the arena so the circle's edge
-        /// still shows streets rather than the camera's clear colour.
+        /// Half-width of what the minimap shows, in metres. The map follows the
+        /// player rather than framing the whole 120 metre arena, so this is a
+        /// neighbourhood — close enough to read streets, wide enough to see
+        /// someone coming.
         /// </summary>
-        private const float MinimapZoomOut = 1.15f;
+        private const float MinimapViewExtent = 35f;
 
         /// <summary>
         /// High enough to clear the tallest building, so the map camera looks
@@ -460,7 +462,7 @@ namespace BarafPaani.EditorTools
             Sprite ring = MinimapSprites.EnsureRing();
 
             RenderTexture texture = BuildMinimapTexture();
-            BuildMinimapCamera(texture, mapLayer);
+            Camera mapCamera = BuildMinimapCamera(texture, mapLayer);
 
             GameObject hud = new GameObject("HUD");
             Canvas canvas = hud.AddComponent<Canvas>();
@@ -540,8 +542,7 @@ namespace BarafPaani.EditorTools
             SerializedObject viewState = new SerializedObject(view);
             viewState.FindProperty("_blipArea").objectReferenceValue = blipRect;
             viewState.FindProperty("_blipPrefab").objectReferenceValue = blipImage;
-            viewState.FindProperty("_arenaCentre").vector3Value = ArenaCentre;
-            viewState.FindProperty("_mapExtent").floatValue = ArenaSize * 0.5f * MinimapZoomOut;
+            viewState.FindProperty("_mapCamera").objectReferenceValue = mapCamera;
             viewState.ApplyModifiedPropertiesWithoutUndo();
 
             Debug.Log("HUD: circular minimap built.");
@@ -574,25 +575,29 @@ namespace BarafPaani.EditorTools
             return AssetDatabase.LoadAssetAtPath<RenderTexture>(MinimapTexturePath);
         }
 
-        private static void BuildMinimapCamera(RenderTexture texture, int mapLayer)
+        private static Camera BuildMinimapCamera(RenderTexture texture, int mapLayer)
         {
             GameObject cameraObject = new GameObject("MinimapCamera");
+
+            // Starting position only; the rig moves it onto the local player as
+            // soon as there is one.
             cameraObject.transform.position =
                 ArenaCentre + new Vector3(0f, MinimapCameraHeight, 0f);
             cameraObject.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
 
             Camera mapCamera = cameraObject.AddComponent<Camera>();
             mapCamera.orthographic = true;
-
-            // A shade wider than the arena, so the disc's edges are map rather
-            // than empty background once the corners are masked away.
-            mapCamera.orthographicSize = ArenaSize * 0.5f * MinimapZoomOut;
+            mapCamera.orthographicSize = MinimapViewExtent;
 
             mapCamera.cullingMask = 1 << mapLayer;
             mapCamera.clearFlags = CameraClearFlags.SolidColor;
             mapCamera.backgroundColor = new Color(0.10f, 0.11f, 0.13f);
             mapCamera.targetTexture = texture;
             mapCamera.depth = -10;
+
+            cameraObject.AddComponent<MinimapCameraRig>();
+
+            return mapCamera;
         }
 
         /// <summary>

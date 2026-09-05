@@ -24,14 +24,11 @@ namespace BarafPaani.UI
         [SerializeField]
         private Image _blipPrefab;
 
-        [Header("Arena")]
+        [Header("Map")]
         [SerializeField]
-        private Vector3 _arenaCentre;
-
-        [SerializeField]
-        [Tooltip("Metres from the centre of the map to its edge. Must match what the " +
-                 "minimap camera actually frames, or blips drift out of step with the map.")]
-        private float _mapExtent = 69f;
+        [Tooltip("The camera drawing the map. Blips take their centre and scale from it, " +
+                 "so the two cannot disagree about what the map is showing.")]
+        private Camera _mapCamera;
 
         [Header("Colours")]
         [SerializeField]
@@ -71,7 +68,7 @@ namespace BarafPaani.UI
         {
             NetworkIdentity local = NetworkClient.localPlayer;
 
-            if (local == null || !local.TryGetComponent(out PlayerRole viewer))
+            if (_mapCamera == null || local == null || !local.TryGetComponent(out PlayerRole viewer))
             {
                 HideAll();
                 return;
@@ -151,17 +148,26 @@ namespace BarafPaani.UI
         }
 
         /// <summary>
-        /// World position to a point on the map. The map shows a fixed area at a
-        /// fixed scale rather than scrolling, so this is a straight linear
-        /// mapping — but clamped to the disc rather than to a square, since the
-        /// map is round. Anything beyond the edge pins to the rim instead of
-        /// disappearing, which is how it stays useful when someone runs wide.
+        /// World position to a point on the map.
+        ///
+        /// Centre and scale are read off the map camera rather than kept as
+        /// their own numbers here. When they were separate, widening the camera
+        /// left the blips mapping against the old extent and they drifted out of
+        /// step with the streets underneath — worst at the edges. Taking both
+        /// from the camera means they cannot disagree.
+        ///
+        /// Clamped to the disc rather than a square, since the map is round.
+        /// Anything past the edge pins to the rim instead of disappearing, which
+        /// is what keeps it useful once the map only shows a neighbourhood.
         /// </summary>
         private Vector2 ToMapPoint(Vector3 world)
         {
+            Vector3 centre = _mapCamera.transform.position;
+            float extent = _mapCamera.orthographicSize;
+
             Vector2 offset = new Vector2(
-                (world.x - _arenaCentre.x) / _mapExtent,
-                (world.z - _arenaCentre.z) / _mapExtent);
+                (world.x - centre.x) / extent,
+                (world.z - centre.z) / extent);
 
             // Leave room for the blip's own radius so it sits inside the frame
             // rather than straddling it.
