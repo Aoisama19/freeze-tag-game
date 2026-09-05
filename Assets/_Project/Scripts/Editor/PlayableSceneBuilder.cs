@@ -48,6 +48,9 @@ namespace BarafPaani.EditorTools
 
         private const string NavMeshAssetPath = "Assets/_Project/Scenes/GameNavMesh.asset";
 
+        /// <summary>Layer the map geometry sits on, so it can block sight.</summary>
+        private const string MapLayerName = "MapGeometry";
+
         /// <summary>
         /// The playable square, cut down from 3 Talwaar's full 537x464 metres.
         /// The original walled off roughly 251x198 with road barriers, which is a
@@ -139,6 +142,22 @@ namespace BarafPaani.EditorTools
             freezeState.ApplyModifiedPropertiesWithoutUndo();
 
             root.AddComponent<TagOnContact>();
+
+            // Sight on a player is used server-side only, to decide whether this
+            // runner has earned a catcher blip on their minimap.
+            Vision vision = AddVision(root, cameraTarget.transform);
+
+            MapAwareness awareness = root.AddComponent<MapAwareness>();
+
+            // Owner, not Observers: the answer goes to this player's connection
+            // and nobody else's. A runner's client is not told where the catcher
+            // is until the server decides it has earned it.
+            awareness.syncMode = SyncMode.Owner;
+
+            SerializedObject awarenessState = new SerializedObject(awareness);
+            awarenessState.FindProperty("_vision").objectReferenceValue = vision;
+            awarenessState.ApplyModifiedPropertiesWithoutUndo();
+
             PlayerCameraRig rig = root.AddComponent<PlayerCameraRig>();
 
             SerializedObject serialized = new SerializedObject(rig);
@@ -209,10 +228,7 @@ namespace BarafPaani.EditorTools
 
             root.AddComponent<TagOnContact>();
 
-            Vision vision = root.AddComponent<Vision>();
-            SerializedObject visionState = new SerializedObject(vision);
-            visionState.FindProperty("_eye").objectReferenceValue = eye.transform;
-            visionState.ApplyModifiedPropertiesWithoutUndo();
+            Vision vision = AddVision(root, eye.transform);
 
             AiBrain brain = root.AddComponent<AiBrain>();
             SerializedObject brainState = new SerializedObject(brain);
@@ -291,7 +307,14 @@ namespace BarafPaani.EditorTools
                 added++;
             }
 
-            Debug.Log($"Map: added {added} mesh colliders.");
+            int mapLayer = EnsureMapLayer();
+
+            foreach (Transform piece in map.GetComponentsInChildren<Transform>(true))
+            {
+                piece.gameObject.layer = mapLayer;
+            }
+
+            Debug.Log($"Map: added {added} mesh colliders, on layer '{MapLayerName}'.");
             return map;
         }
 
@@ -391,6 +414,71 @@ namespace BarafPaani.EditorTools
             SaveNavMesh(surface);
 
             Debug.Log($"Spawn points placed on the NavMesh: {placed} of {SpawnPointCount}.");
+        }
+
+        /// <summary>
+        /// Adds sight, with the map set as the thing that blocks it.
+        ///
+        /// The blocking mask was empty until now, which meant line of sight was
+        /// never actually blocked by anything — on a flat plane that made no
+        /// difference, but on a city it would have let runners see the catcher
+        /// straight through buildings and left the minimap blip permanently lit.
+        /// </summary>
+        private static Vision AddVision(GameObject root, Transform eye)
+        {
+            Vision vision = root.AddComponent<Vision>();
+
+            SerializedObject state = new SerializedObject(vision);
+            state.FindProperty("_eye").objectReferenceValue = eye;
+            state.FindProperty("_blockingMask").intValue = 1 << EnsureMapLayer();
+            state.ApplyModifiedPropertiesWithoutUndo();
+
+            return vision;
+        }
+
+        /// <summary>
+        /// Finds the layer the map geometry lives on, adding it to the project
+        /// if it is not there yet. Sight needs the map on a layer of its own so
+        /// buildings can block it without characters blocking each other.
+        /// </summary>
+        private static int EnsureMapLayer()
+        {
+            int existing = LayerMask.NameToLayer(MapLayerName);
+
+            if (existing >= 0)
+            {
+                return existing;
+            }
+
+            Object[] assets = AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset");
+
+            if (assets.Length == 0)
+            {
+                Debug.LogError("Could not open TagManager to add the map layer.");
+                return 0;
+            }
+
+            SerializedObject tagManager = new SerializedObject(assets[0]);
+            SerializedProperty layers = tagManager.FindProperty("layers");
+
+            // 0-7 are Unity's own and cannot be renamed.
+            for (int i = 8; i < layers.arraySize; i++)
+            {
+                SerializedProperty layer = layers.GetArrayElementAtIndex(i);
+
+                if (!string.IsNullOrEmpty(layer.stringValue))
+                {
+                    continue;
+                }
+
+                layer.stringValue = MapLayerName;
+                tagManager.ApplyModifiedProperties();
+                Debug.Log($"Added layer '{MapLayerName}' in slot {i}.");
+                return i;
+            }
+
+            Debug.LogError($"No free layer slot for '{MapLayerName}'.");
+            return 0;
         }
 
         /// <summary>
