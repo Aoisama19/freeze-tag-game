@@ -26,13 +26,22 @@ namespace BarafPaani.EditorTools
         private const string AiPrefabPath = "Assets/_Project/Prefabs/AiCharacter.prefab";
         private const string ScenePath = "Assets/_Project/Scenes/Game.unity";
 
-        private static readonly Vector3[] SpawnPoints =
-        {
-            new Vector3(0f, 0f, 0f),
-            new Vector3(4f, 0f, 0f),
-            new Vector3(0f, 0f, 4f),
-            new Vector3(4f, 0f, 4f)
-        };
+        /// <summary>
+        /// More spawn points than characters, so round-robin never wraps and
+        /// puts two people on the same spot. There were four points and five
+        /// characters: the AI took all four, then the human wrapped back onto
+        /// point one and was frozen on arrival by the catcher already standing
+        /// there. Eight leaves headroom.
+        /// </summary>
+        private const int SpawnPointCount = 8;
+
+        /// <summary>
+        /// Ring radius. The ground is a 50x50 plane, so this keeps everyone well
+        /// inside it while putting opposite points 32 metres apart — the AI is
+        /// spawned before the human, so the human lands across the ring from the
+        /// catcher rather than next to it.
+        /// </summary>
+        private const float SpawnRingRadius = 16f;
 
         [MenuItem("Baraf-Paani/Rebuild Playable Scene")]
         public static void Rebuild()
@@ -199,10 +208,19 @@ namespace BarafPaani.EditorTools
             BuildCamera();
             BuildNetworkManager(playerPrefab, aiPrefab);
 
-            for (int i = 0; i < SpawnPoints.Length; i++)
+            for (int i = 0; i < SpawnPointCount; i++)
             {
+                float angle = i * Mathf.PI * 2f / SpawnPointCount;
+                Vector3 position = new Vector3(
+                    Mathf.Sin(angle) * SpawnRingRadius, 0f, Mathf.Cos(angle) * SpawnRingRadius);
+
                 GameObject spawn = new GameObject($"SpawnPoint {i + 1}");
-                spawn.transform.position = SpawnPoints[i];
+                spawn.transform.position = position;
+
+                // Face the middle, so whoever spawns here is looking at the game
+                // rather than out at empty ground.
+                spawn.transform.rotation = Quaternion.LookRotation(-position.normalized);
+
                 spawn.AddComponent<NetworkStartPosition>();
             }
 
