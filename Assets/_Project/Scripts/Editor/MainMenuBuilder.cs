@@ -5,6 +5,7 @@ using BarafPaani.UI;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.InputSystem.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -51,11 +52,7 @@ namespace BarafPaani.EditorTools
 
             canvasObject.AddComponent<GraphicRaycaster>();
 
-            // Buttons do nothing without one of these, and a scene built from
-            // code has no reason to have picked one up.
-            new GameObject("EventSystem")
-                .AddComponent<UnityEngine.EventSystems.EventSystem>()
-                .gameObject.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+            BuildEventSystem();
 
             BuildBackground(canvasObject);
             Text title = MakeText(canvasObject, "Title", font, 90, TextAnchor.MiddleCenter);
@@ -110,6 +107,28 @@ namespace BarafPaani.EditorTools
             AddToBuildSettings();
 
             Debug.Log("Baraf-Paani: rebuilt the main menu.");
+        }
+
+        /// <summary>
+        /// Buttons do nothing without an event system, and a scene built from
+        /// code has no reason to have picked one up.
+        ///
+        /// InputSystemUIInputModule, not StandaloneInputModule. The standalone
+        /// one reads UnityEngine.Input, and this project is set to the new Input
+        /// System only, where those calls throw — so the module never delivered a
+        /// click and the whole menu was dead. Exactly the incompatibility that
+        /// ruled out reusing the old minimap package.
+        /// </summary>
+        private static void BuildEventSystem()
+        {
+            GameObject events = new GameObject("EventSystem");
+            events.AddComponent<UnityEngine.EventSystems.EventSystem>();
+
+            InputSystemUIInputModule module = events.AddComponent<InputSystemUIInputModule>();
+
+            // Added from code, so it has no actions bound. The defaults cover
+            // pointer and navigation, which is all a menu needs.
+            module.AssignDefaultActions();
         }
 
         /// <summary>

@@ -8,7 +8,8 @@
         "Mirror.Transports",
         "Unity.Cinemachine",
         "Unity.AI.Navigation",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [
         "Editor"
