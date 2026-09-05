@@ -60,9 +60,15 @@ namespace BarafPaani.EditorTools
         private const int MinimapTextureSize = 512;
 
         /// <summary>On-screen size of the minimap panel, in canvas units.</summary>
-        private const float MinimapPanelSize = 220f;
+        private const float MinimapPanelSize = 150f;
 
-        private const float BlipSize = 10f;
+        private const float BlipSize = 9f;
+
+        /// <summary>
+        /// Map is framed slightly wider than the arena so the circle's edge
+        /// still shows streets rather than the camera's clear colour.
+        /// </summary>
+        private const float MinimapZoomOut = 1.15f;
 
         /// <summary>
         /// High enough to clear the tallest building, so the map camera looks
@@ -450,10 +456,112 @@ namespace BarafPaani.EditorTools
         {
             int mapLayer = EnsureMapLayer();
 
-            // Saved as an asset, not just newed up: a RenderTexture created in
-            // code does not serialise into the scene, so the camera and the
-            // RawImage would both come back pointing at nothing and the map
-            // would render black.
+            Sprite circle = MinimapSprites.EnsureCircle();
+            Sprite ring = MinimapSprites.EnsureRing();
+
+            RenderTexture texture = BuildMinimapTexture();
+            BuildMinimapCamera(texture, mapLayer);
+
+            GameObject hud = new GameObject("HUD");
+            Canvas canvas = hud.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+
+            CanvasScaler scaler = hud.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920f, 1080f);
+
+            hud.AddComponent<GraphicRaycaster>();
+
+            GameObject panel = new GameObject("Minimap");
+            panel.transform.SetParent(hud.transform, false);
+
+            RectTransform panelRect = panel.AddComponent<RectTransform>();
+            panelRect.anchorMin = new Vector2(1f, 1f);
+            panelRect.anchorMax = new Vector2(1f, 1f);
+            panelRect.pivot = new Vector2(1f, 1f);
+            panelRect.anchoredPosition = new Vector2(-24f, -24f);
+            panelRect.sizeDelta = new Vector2(MinimapPanelSize, MinimapPanelSize);
+
+            // The mask is what makes the map round. Its own graphic is hidden —
+            // it exists to define the shape, not to be seen — and everything
+            // under it, map and blips alike, is clipped to the disc.
+            GameObject maskObject = new GameObject("Mask");
+            maskObject.transform.SetParent(panel.transform, false);
+
+            RectTransform maskRect = maskObject.AddComponent<RectTransform>();
+            Stretch(maskRect);
+
+            Image maskImage = maskObject.AddComponent<Image>();
+            maskImage.sprite = circle;
+
+            Mask mask = maskObject.AddComponent<Mask>();
+            mask.showMaskGraphic = false;
+
+            GameObject mapObject = new GameObject("Map");
+            mapObject.transform.SetParent(maskObject.transform, false);
+
+            RectTransform mapRect = mapObject.AddComponent<RectTransform>();
+            Stretch(mapRect);
+
+            RawImage background = mapObject.AddComponent<RawImage>();
+            background.texture = texture;
+
+            GameObject blipArea = new GameObject("Blips");
+            blipArea.transform.SetParent(maskObject.transform, false);
+
+            RectTransform blipRect = blipArea.AddComponent<RectTransform>();
+            Stretch(blipRect);
+
+            GameObject blipPrefab = new GameObject("Blip");
+            blipPrefab.transform.SetParent(blipArea.transform, false);
+
+            RectTransform blipPrefabRect = blipPrefab.AddComponent<RectTransform>();
+            blipPrefabRect.sizeDelta = new Vector2(BlipSize, BlipSize);
+
+            Image blipImage = blipPrefab.AddComponent<Image>();
+            blipImage.sprite = circle;
+            blipImage.enabled = false;
+
+            // Frame sits outside the mask, so the ring is not clipped by the
+            // very shape it is drawing the edge of.
+            GameObject frame = new GameObject("Frame");
+            frame.transform.SetParent(panel.transform, false);
+
+            RectTransform frameRect = frame.AddComponent<RectTransform>();
+            Stretch(frameRect);
+
+            Image frameImage = frame.AddComponent<Image>();
+            frameImage.sprite = ring;
+            frameImage.color = new Color(0.85f, 0.85f, 0.88f, 0.9f);
+            frameImage.raycastTarget = false;
+
+            MinimapView view = hud.AddComponent<MinimapView>();
+
+            SerializedObject viewState = new SerializedObject(view);
+            viewState.FindProperty("_blipArea").objectReferenceValue = blipRect;
+            viewState.FindProperty("_blipPrefab").objectReferenceValue = blipImage;
+            viewState.FindProperty("_arenaCentre").vector3Value = ArenaCentre;
+            viewState.FindProperty("_mapExtent").floatValue = ArenaSize * 0.5f * MinimapZoomOut;
+            viewState.ApplyModifiedPropertiesWithoutUndo();
+
+            Debug.Log("HUD: circular minimap built.");
+        }
+
+        private static void Stretch(RectTransform rect)
+        {
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+        }
+
+        /// <summary>
+        /// Saved as an asset, not just newed up: a RenderTexture created in code
+        /// does not serialise into a scene, so the camera and the image would
+        /// both come back pointing at nothing and the map would render black.
+        /// </summary>
+        private static RenderTexture BuildMinimapTexture()
+        {
             RenderTexture texture = new RenderTexture(MinimapTextureSize, MinimapTextureSize, 16)
             {
                 name = "MinimapTexture"
@@ -463,8 +571,11 @@ namespace BarafPaani.EditorTools
             AssetDatabase.CreateAsset(texture, MinimapTexturePath);
             AssetDatabase.SaveAssets();
 
-            texture = AssetDatabase.LoadAssetAtPath<RenderTexture>(MinimapTexturePath);
+            return AssetDatabase.LoadAssetAtPath<RenderTexture>(MinimapTexturePath);
+        }
 
+        private static void BuildMinimapCamera(RenderTexture texture, int mapLayer)
+        {
             GameObject cameraObject = new GameObject("MinimapCamera");
             cameraObject.transform.position =
                 ArenaCentre + new Vector3(0f, MinimapCameraHeight, 0f);
@@ -472,65 +583,16 @@ namespace BarafPaani.EditorTools
 
             Camera mapCamera = cameraObject.AddComponent<Camera>();
             mapCamera.orthographic = true;
-            mapCamera.orthographicSize = ArenaSize * 0.5f;
+
+            // A shade wider than the arena, so the disc's edges are map rather
+            // than empty background once the corners are masked away.
+            mapCamera.orthographicSize = ArenaSize * 0.5f * MinimapZoomOut;
+
             mapCamera.cullingMask = 1 << mapLayer;
             mapCamera.clearFlags = CameraClearFlags.SolidColor;
-            mapCamera.backgroundColor = new Color(0.08f, 0.09f, 0.11f);
+            mapCamera.backgroundColor = new Color(0.10f, 0.11f, 0.13f);
             mapCamera.targetTexture = texture;
-
-            // Off the main camera's stack: this one only ever feeds the texture.
             mapCamera.depth = -10;
-
-            GameObject hud = new GameObject("HUD");
-            Canvas canvas = hud.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            hud.AddComponent<CanvasScaler>().uiScaleMode =
-                CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            hud.AddComponent<GraphicRaycaster>();
-
-            GameObject panel = new GameObject("Minimap");
-            panel.transform.SetParent(hud.transform, false);
-
-            RectTransform panelRect = panel.AddComponent<RectTransform>();
-
-            // Top-right corner, inset a little.
-            panelRect.anchorMin = new Vector2(1f, 1f);
-            panelRect.anchorMax = new Vector2(1f, 1f);
-            panelRect.pivot = new Vector2(1f, 1f);
-            panelRect.anchoredPosition = new Vector2(-16f, -16f);
-            panelRect.sizeDelta = new Vector2(MinimapPanelSize, MinimapPanelSize);
-
-            RawImage background = panel.AddComponent<RawImage>();
-            background.texture = texture;
-
-            GameObject blipArea = new GameObject("Blips");
-            blipArea.transform.SetParent(panel.transform, false);
-
-            RectTransform blipRect = blipArea.AddComponent<RectTransform>();
-            blipRect.anchorMin = Vector2.zero;
-            blipRect.anchorMax = Vector2.one;
-            blipRect.offsetMin = Vector2.zero;
-            blipRect.offsetMax = Vector2.zero;
-
-            GameObject blipPrefab = new GameObject("Blip");
-            blipPrefab.transform.SetParent(blipArea.transform, false);
-
-            RectTransform blipPrefabRect = blipPrefab.AddComponent<RectTransform>();
-            blipPrefabRect.sizeDelta = new Vector2(BlipSize, BlipSize);
-
-            Image blipImage = blipPrefab.AddComponent<Image>();
-            blipImage.enabled = false;
-
-            MinimapView view = hud.AddComponent<MinimapView>();
-
-            SerializedObject viewState = new SerializedObject(view);
-            viewState.FindProperty("_blipArea").objectReferenceValue = blipRect;
-            viewState.FindProperty("_blipPrefab").objectReferenceValue = blipImage;
-            viewState.FindProperty("_arenaCentre").vector3Value = ArenaCentre;
-            viewState.FindProperty("_arenaSize").floatValue = ArenaSize;
-            viewState.ApplyModifiedPropertiesWithoutUndo();
-
-            Debug.Log("HUD: minimap built.");
         }
 
         /// <summary>

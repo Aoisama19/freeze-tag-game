@@ -29,7 +29,9 @@ namespace BarafPaani.UI
         private Vector3 _arenaCentre;
 
         [SerializeField]
-        private float _arenaSize = 120f;
+        [Tooltip("Metres from the centre of the map to its edge. Must match what the " +
+                 "minimap camera actually frames, or blips drift out of step with the map.")]
+        private float _mapExtent = 69f;
 
         [Header("Colours")]
         [SerializeField]
@@ -149,19 +151,31 @@ namespace BarafPaani.UI
         }
 
         /// <summary>
-        /// World position to a point on the map. The map shows the whole arena
-        /// at a fixed scale rather than scrolling, so this is a straight linear
-        /// mapping from arena coordinates onto the blip area.
+        /// World position to a point on the map. The map shows a fixed area at a
+        /// fixed scale rather than scrolling, so this is a straight linear
+        /// mapping — but clamped to the disc rather than to a square, since the
+        /// map is round. Anything beyond the edge pins to the rim instead of
+        /// disappearing, which is how it stays useful when someone runs wide.
         /// </summary>
         private Vector2 ToMapPoint(Vector3 world)
         {
-            float half = _arenaSize * 0.5f;
+            Vector2 offset = new Vector2(
+                (world.x - _arenaCentre.x) / _mapExtent,
+                (world.z - _arenaCentre.z) / _mapExtent);
 
-            float x = Mathf.Clamp((world.x - _arenaCentre.x) / half, -1f, 1f);
-            float z = Mathf.Clamp((world.z - _arenaCentre.z) / half, -1f, 1f);
+            // Leave room for the blip's own radius so it sits inside the frame
+            // rather than straddling it.
+            const float rim = 0.92f;
+
+            if (offset.sqrMagnitude > rim * rim)
+            {
+                offset = offset.normalized * rim;
+            }
 
             Rect area = _blipArea.rect;
-            return new Vector2(x * area.width * 0.5f, z * area.height * 0.5f);
+            float radius = Mathf.Min(area.width, area.height) * 0.5f;
+
+            return offset * radius;
         }
 
         private Image GetBlip(uint netId)
