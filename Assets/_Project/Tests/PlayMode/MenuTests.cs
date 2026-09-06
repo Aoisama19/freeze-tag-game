@@ -246,6 +246,58 @@ namespace BarafPaani.Tests
             Assert.IsTrue(preview.enabled, "the picture is there but not being drawn");
         }
 
+        [UnityTest]
+        public IEnumerator Settings_are_reachable_and_start_closed()
+        {
+            yield return LoadMenu();
+
+            SettingsPanel settings = Object.FindFirstObjectByType<SettingsPanel>();
+            Assert.IsNotNull(settings, "there is no way to change the volume");
+
+            foreach (string name in new[]
+                     {
+                         "_openButton", "_closeButton", "_volumeSlider", "_sensitivitySlider",
+                     })
+            {
+                Assert.IsNotNull(
+                    typeof(SettingsPanel)
+                        .GetField(name, BindingFlags.NonPublic | BindingFlags.Instance)
+                        .GetValue(settings),
+                    $"{name} is not wired up");
+            }
+
+            GameObject panel = (GameObject)typeof(SettingsPanel)
+                .GetField("_panel", BindingFlags.NonPublic | BindingFlags.Instance)
+                .GetValue(settings);
+
+            Assert.IsNotNull(panel);
+            Assert.IsFalse(panel.activeSelf, "the settings panel is covering the menu on open");
+        }
+
+        [UnityTest]
+        public IEnumerator The_volume_slider_actually_changes_the_volume()
+        {
+            yield return LoadMenu();
+
+            SettingsPanel settings = Object.FindFirstObjectByType<SettingsPanel>();
+
+            Slider volume = (Slider)typeof(SettingsPanel)
+                .GetField("_volumeSlider", BindingFlags.NonPublic | BindingFlags.Instance)
+                .GetValue(settings);
+
+            float before = AudioListener.volume;
+
+            // Moved to something definitely different from wherever it sat.
+            volume.value = before > 0.5f ? 0.1f : 0.9f;
+            yield return null;
+
+            Assert.AreNotEqual(
+                before, AudioListener.volume, "moving the slider did not reach the audio");
+
+            Assert.AreEqual(
+                volume.value, AudioListener.volume, 0.001f, "the volume does not match the slider");
+        }
+
         private static Rect ScreenRect(RectTransform rect)
         {
             Vector3[] corners = new Vector3[4];

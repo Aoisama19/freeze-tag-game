@@ -307,6 +307,35 @@ Round length is a menu choice, from one minute to ten. It travels menu →
 its own falls back to its own default, which is what keeps the scenes usable
 alone.
 
+## Settings
+
+Volume and look sensitivity, reached from the menu.
+
+`GameSettings` is an asset for the same reason `MatchSetup` is one — inspectable,
+wired up, no static mutable state. But it is only the accessor: changes to a
+ScriptableObject do not survive a build, so the values live in PlayerPrefs and
+are loaded into the asset on start. Saved when the panel closes rather than on
+every frame of a drag, because `PlayerPrefs.Save` writes to disk. The *effect* is
+applied live as the slider moves, since volume is impossible to set sensibly if
+you cannot hear the result until afterwards.
+
+`SettingsApplier` sits in the menu, the join screen and every map. Volume has to
+hold everywhere or the game would be quiet on the menu and loud the moment a
+match loaded. Sensitivity only means anything where there is a camera to turn,
+so it is applied where one is found and skipped where there is not.
+
+Sensitivity captures Cinemachine's original per-axis gains once and multiplies
+from them. Multiplying the current value would compound every time the slider
+moved — the same trap the speed boost had to avoid — and one remembered number
+would flatten the difference between axes, which Cinemachine does not give the
+same gain. The axis list is discovered at runtime and the controller belongs to
+the spawned player, so the applier keeps looking for it on a slow tick rather
+than expecting it on the first frame.
+
+Both values are clamped, because PlayerPrefs is a file anyone can edit. A
+negative sensitivity would invert the camera with no way back except editing the
+file again; zero would be a camera that will not turn at all.
+
 ## Deliberately not doing
 
 - **Client-side prediction or lag compensation.** This is a LAN/friends-scale

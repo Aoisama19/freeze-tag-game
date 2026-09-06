@@ -24,6 +24,7 @@ namespace BarafPaani.EditorTools
     {
         private const string ScenePath = "Assets/_Project/Scenes/MainMenu.unity";
         private const string SetupPath = "Assets/_Project/Settings/MatchSetup.asset";
+        private const string SettingsPath = "Assets/_Project/Settings/GameSettings.asset";
         private const string ArtRoot = "Assets/_Project/Art/UI/Menu/";
         private const string FontPath = "Assets/_Project/Art/UI/Fonts/Orbitron.ttf";
 
@@ -146,8 +147,12 @@ namespace BarafPaani.EditorTools
                 new Vector2(0f, -158f), new Vector2(400f, 52f));
 
             Button quit = MakeButton(canvasObject, "QuitButton", font, "QUIT",
-                new Vector2(0.5f, 0.5f), new Vector2(0f, -300f), new Vector2(240f, 66f),
+                new Vector2(0.5f, 0.5f), new Vector2(-140f, -300f), new Vector2(240f, 66f),
                 Sprite("Quitbtn_Rectangle_56.png"));
+
+            Button settingsButton = MakeButton(canvasObject, "SettingsButton", font, "SETTINGS",
+                new Vector2(0.5f, 0.5f), new Vector2(140f, -300f), new Vector2(240f, 66f),
+                Sprite("Settingsbtn_Rectangle_56.png"));
 
             MenuController controller = canvasObject.AddComponent<MenuController>();
 
@@ -185,7 +190,10 @@ namespace BarafPaani.EditorTools
             state.FindProperty("_quitButton").objectReferenceValue = quit;
             state.ApplyModifiedPropertiesWithoutUndo();
 
-            AddFeel(catcher, runner, single, host, join, mapButton, roundButton, quit);
+            BuildSettings(canvasObject, font, settingsButton);
+
+            AddFeel(catcher, runner, single, host, join, mapButton, roundButton, quit,
+                settingsButton);
 
             BuildIntro(canvasObject, new RectTransform[]
             {
@@ -322,6 +330,141 @@ namespace BarafPaani.EditorTools
                 sceneList.GetArrayElementAtIndex(i).stringValue = scenes[i];
                 imageList.GetArrayElementAtIndex(i).objectReferenceValue = images[i];
             }
+        }
+
+        /// <summary>
+        /// The settings overlay, and the thing that makes its values take
+        /// effect. Built inactive and stretched over everything, so opening it
+        /// covers the menu rather than sitting among it.
+        /// </summary>
+        private static void BuildSettings(GameObject canvas, Font font, Button openButton)
+        {
+            GameSettings settings = EnsureSettings();
+
+            SettingsApplier applier = canvas.AddComponent<SettingsApplier>();
+            SerializedObject applierState = new SerializedObject(applier);
+            applierState.FindProperty("_settings").objectReferenceValue = settings;
+            applierState.ApplyModifiedPropertiesWithoutUndo();
+
+            GameObject panel = new GameObject("SettingsPanel");
+            panel.transform.SetParent(canvas.transform, false);
+
+            RectTransform panelRect = panel.AddComponent<RectTransform>();
+            panelRect.anchorMin = Vector2.zero;
+            panelRect.anchorMax = Vector2.one;
+            panelRect.offsetMin = Vector2.zero;
+            panelRect.offsetMax = Vector2.zero;
+
+            Image shade = panel.AddComponent<Image>();
+            shade.color = new Color(0.02f, 0.03f, 0.06f, 0.88f);
+
+            Text heading = MakeText(panel, "Heading", font, 48, TextAnchor.MiddleCenter);
+            Place(heading.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 210f),
+                new Vector2(700f, 64f));
+            heading.text = "SETTINGS";
+
+            Text volumeLabel = MakeText(panel, "VolumeLabel", font, 26, TextAnchor.MiddleCenter);
+            Place(volumeLabel.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 104f),
+                new Vector2(700f, 36f));
+
+            Slider volume = MakeSlider(panel, "VolumeSlider", new Vector2(0f, 56f));
+
+            Text lookLabel = MakeText(panel, "SensitivityLabel", font, 26, TextAnchor.MiddleCenter);
+            Place(lookLabel.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, -26f),
+                new Vector2(700f, 36f));
+
+            Slider look = MakeSlider(panel, "SensitivitySlider", new Vector2(0f, -74f));
+
+            Button close = MakeButton(panel, "CloseSettingsButton", font, "BACK",
+                new Vector2(0.5f, 0.5f), new Vector2(0f, -190f), new Vector2(240f, 64f),
+                Sprite("Quitbtn_Rectangle_56.png"));
+
+            close.gameObject.AddComponent<ButtonFeel>();
+
+            SettingsPanel screen = canvas.AddComponent<SettingsPanel>();
+            SerializedObject state = new SerializedObject(screen);
+            state.FindProperty("_settings").objectReferenceValue = settings;
+            state.FindProperty("_applier").objectReferenceValue = applier;
+            state.FindProperty("_panel").objectReferenceValue = panel;
+            state.FindProperty("_openButton").objectReferenceValue = openButton;
+            state.FindProperty("_closeButton").objectReferenceValue = close;
+            state.FindProperty("_volumeSlider").objectReferenceValue = volume;
+            state.FindProperty("_volumeLabel").objectReferenceValue = volumeLabel;
+            state.FindProperty("_sensitivitySlider").objectReferenceValue = look;
+            state.FindProperty("_sensitivityLabel").objectReferenceValue = lookLabel;
+            state.ApplyModifiedPropertiesWithoutUndo();
+
+            panel.SetActive(false);
+        }
+
+        /// <summary>
+        /// A slider, built by hand. Unity needs the fill and the handle wired to
+        /// the component explicitly; nothing does it for you from code, and a
+        /// slider missing either simply does not move.
+        /// </summary>
+        private static Slider MakeSlider(GameObject parent, string name, Vector2 position)
+        {
+            GameObject root = new GameObject(name);
+            root.transform.SetParent(parent.transform, false);
+
+            RectTransform rect = root.AddComponent<RectTransform>();
+            Place(rect, new Vector2(0.5f, 0.5f), position, new Vector2(620f, 28f));
+
+            Image background = root.AddComponent<Image>();
+            background.color = new Color(1f, 1f, 1f, 0.18f);
+
+            GameObject fillArea = new GameObject("Fill Area");
+            fillArea.transform.SetParent(root.transform, false);
+            RectTransform fillAreaRect = fillArea.AddComponent<RectTransform>();
+            Stretch(fillAreaRect);
+
+            GameObject fill = new GameObject("Fill");
+            fill.transform.SetParent(fillArea.transform, false);
+            RectTransform fillRect = fill.AddComponent<RectTransform>();
+            Stretch(fillRect);
+
+            Image fillImage = fill.AddComponent<Image>();
+            fillImage.color = new Color(1f, 0.85f, 0.3f, 0.85f);
+
+            GameObject handleArea = new GameObject("Handle Slide Area");
+            handleArea.transform.SetParent(root.transform, false);
+            RectTransform handleAreaRect = handleArea.AddComponent<RectTransform>();
+            Stretch(handleAreaRect);
+
+            GameObject handle = new GameObject("Handle");
+            handle.transform.SetParent(handleArea.transform, false);
+            RectTransform handleRect = handle.AddComponent<RectTransform>();
+            handleRect.sizeDelta = new Vector2(26f, 40f);
+
+            Image handleImage = handle.AddComponent<Image>();
+            handleImage.color = Color.white;
+
+            Slider slider = root.AddComponent<Slider>();
+            slider.direction = Slider.Direction.LeftToRight;
+            slider.fillRect = fillRect;
+            slider.handleRect = handleRect;
+            slider.targetGraphic = handleImage;
+
+            return slider;
+        }
+
+        /// <summary>Creates the settings asset the first time, as the setup asset is.</summary>
+        public static GameSettings EnsureSettings()
+        {
+            GameSettings existing = AssetDatabase.LoadAssetAtPath<GameSettings>(SettingsPath);
+
+            if (existing != null)
+            {
+                return existing;
+            }
+
+            Directory.CreateDirectory(Path.GetDirectoryName(SettingsPath));
+
+            GameSettings created = ScriptableObject.CreateInstance<GameSettings>();
+            AssetDatabase.CreateAsset(created, SettingsPath);
+            AssetDatabase.SaveAssets();
+
+            return created;
         }
 
         /// <summary>A plate to sit a group of controls on, so they read as a group.</summary>
@@ -604,6 +747,15 @@ namespace BarafPaani.EditorTools
             rect.pivot = new Vector2(0.5f, 0.5f);
             rect.anchoredPosition = position;
             rect.sizeDelta = size;
+        }
+
+        /// <summary>Fills the parent. A slider's fill and handle areas both need it.</summary>
+        private static void Stretch(RectTransform rect)
+        {
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
         }
     }
 }

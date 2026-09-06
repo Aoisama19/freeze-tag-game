@@ -107,6 +107,12 @@ namespace BarafPaani.Tests
                     Object.FindFirstObjectByType<NetworkManagerHUD>(),
                     $"{map} still shows Mirror's debug buttons");
 
+                // Volume and sensitivity are chosen in the menu but have to be
+                // put into effect where the game actually is.
+                Assert.IsNotNull(
+                    Object.FindFirstObjectByType<SettingsApplier>(),
+                    $"{map} ignores the settings entirely");
+
                 InGameMenu inGame = Object.FindFirstObjectByType<InGameMenu>();
                 Assert.IsNotNull(inGame, $"{map} has no way out except closing the game");
 

@@ -957,6 +957,14 @@ namespace BarafPaani.EditorTools
 
             BuildInGameMenu(hud, font);
 
+            // Volume and look sensitivity are settings the menu owns, but they
+            // have to be put into effect wherever the game actually is.
+            SettingsApplier applier = hud.AddComponent<SettingsApplier>();
+            SerializedObject applierState = new SerializedObject(applier);
+            applierState.FindProperty("_settings").objectReferenceValue =
+                MainMenuBuilder.EnsureSettings();
+            applierState.ApplyModifiedPropertiesWithoutUndo();
+
             Text score = MakeLabel(hud, "ScoreLabel", font, 20, TextAnchor.UpperRight);
             Place(score.rectTransform, new Vector2(1f, 1f), new Vector2(-24f, -24f),
                 new Vector2(560f, 30f));

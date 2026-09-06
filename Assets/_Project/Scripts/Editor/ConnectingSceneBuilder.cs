@@ -78,6 +78,14 @@ namespace BarafPaani.EditorTools
 
             Button back = MakeBackButton(canvasObject, font);
 
+            // Volume applies here too, or the game would be silent on the menu
+            // and loud the moment a match loaded.
+            SettingsApplier volume = canvasObject.AddComponent<SettingsApplier>();
+            SerializedObject volumeState = new SerializedObject(volume);
+            volumeState.FindProperty("_settings").objectReferenceValue =
+                MainMenuBuilder.EnsureSettings();
+            volumeState.ApplyModifiedPropertiesWithoutUndo();
+
             ConnectingScreen screen = canvasObject.AddComponent<ConnectingScreen>();
             HostBrowser browser = canvasObject.AddComponent<HostBrowser>();
 
