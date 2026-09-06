@@ -45,6 +45,8 @@ GameObject:
   - component: {fileID: 6553513007831062896}
   - component: {fileID: 2754040489662379491}
   - component: {fileID: 7571416006328638909}
+  - component: {fileID: 202561696996488629}
+  - component: {fileID: 7659928014761434019}
   - component: {fileID: 1727179668515673723}
   - component: {fileID: 2419465016372248646}
   - component: {fileID: 6454497505027680911}
@@ -179,6 +181,121 @@ MonoBehaviour:
   _teleportSpeed: 25
   _topClipSpeed: 5.662317
   _maxPlaybackRate: 1.5
+--- !u!82 &202561696996488629
+AudioSource:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3616083226831351402}
+  m_Enabled: 1
+  serializedVersion: 4
+  OutputAudioMixerGroup: {fileID: 0}
+  m_audioClip: {fileID: 0}
+  m_Resource: {fileID: 0}
+  m_PlayOnAwake: 0
+  m_Volume: 1
+  m_Pitch: 1
+  Loop: 0
+  Mute: 0
+  Spatialize: 0
+  SpatializePostEffects: 0
+  Priority: 128
+  DopplerLevel: 1
+  MinDistance: 2
+  MaxDistance: 30
+  Pan2D: 0
+  rolloffMode: 1
+  BypassEffects: 0
+  BypassListenerEffects: 0
+  BypassReverbZones: 0
+  rolloffCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  panLevelCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  spreadCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  reverbZoneMixCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+--- !u!114 &7659928014761434019
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3616083226831351402}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6456d4af0934d5c41a68a0a4a6bd762a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: BarafPaani::BarafPaani.Audio.CharacterAudio
+  _sounds: {fileID: 11400000, guid: 767f5541d04be1549b80e88015389d20, type: 2}
+  _source: {fileID: 202561696996488629}
+  _strideLength: 1.9
+  _quietBelowSpeed: 0.6
+  _footstepVolume: 0.45
+  _teleportSpeed: 25
 --- !u!114 &1727179668515673723
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -249,6 +366,7 @@ MonoBehaviour:
   _motor: {fileID: 0}
   _appearance: {fileID: 2754040489662379491}
   _animation: {fileID: 7571416006328638909}
+  _audio: {fileID: 7659928014761434019}
 --- !u!114 &3614840783962587385
 MonoBehaviour:
   m_ObjectHideFlags: 0

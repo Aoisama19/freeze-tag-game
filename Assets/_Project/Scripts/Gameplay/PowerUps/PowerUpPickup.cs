@@ -38,6 +38,9 @@ namespace BarafPaani.Gameplay.PowerUps
         [SerializeField]
         private LayerMask _characterMask = ~0;
 
+        [SerializeField]
+        private BarafPaani.Audio.SoundBank _sounds;
+
         [Header("Look")]
         [SerializeField]
         private float _spinDegreesPerSecond = 60f;
@@ -207,8 +210,20 @@ namespace BarafPaani.Gameplay.PowerUps
             Apply(current);
         }
 
+        private bool _applied;
+
         private void Apply(bool available)
         {
+            // Heard where it was taken, on every client, because _available is
+            // replicated. Not on the first application, which is only the state
+            // the pickup starts the match in.
+            if (_applied && !available && _sounds != null && _sounds.Pickup != null)
+            {
+                AudioSource.PlayClipAtPoint(_sounds.Pickup, transform.position, 0.8f);
+            }
+
+            _applied = true;
+
             if (_collider != null)
             {
                 _collider.enabled = available;

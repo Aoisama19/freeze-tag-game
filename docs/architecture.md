@@ -172,6 +172,35 @@ Three rules are worth stating:
 Nothing freezes while the lobby is open, so a catcher cannot start early.
 Rounds after the first restart directly rather than returning to the lobby.
 
+## Audio
+
+Footsteps, a chime for freezing and thawing, pickups, power-ups, and the round
+announcing itself and its result.
+
+The sounds are **synthesised** by an editor script and committed as wavs, built
+the same way as the scene and the animator, so what is in the repository is a
+readable description of them. That also settles the licensing: the old project's
+entire audio folder was one hour-long rip of a commercial recording by a named
+musician, which is neither a sound library nor ours to ship. The exception is
+the footsteps, which are Unity's own Starter Assets recordings under the Unity
+Companion License, kept in `Audio/Footsteps` with the licence beside them.
+
+`SoundBank` is an asset, not a singleton. The old `AudioManager` was a static
+instance with `DontDestroyOnLoad` that looked clips up by string at the call
+site, so a typo was silence and nothing could be checked until it was played.
+
+Nothing about audio is networked. Every client already knows where everyone is,
+so it can work out what it should be hearing; footsteps are driven by ground
+covered rather than animation events, which means one component covers the local
+player, a remote player and a bot. The single exception is the power-up sound,
+which goes out as a `ClientRpc`: the clone has no replicated flag of its own for
+a hook to fire on, so one of the three would have been silent.
+
+Two details worth not rediscovering: `Freezable` only chimes on an actual change,
+or every character thaws audibly the moment it spawns; and footsteps reuse
+`MoveSpeed`, so a round restart teleporting everyone home does not land as a
+burst of running.
+
 ## Deliberately not doing
 
 - **Client-side prediction or lag compensation.** This is a LAN/friends-scale

@@ -1,4 +1,5 @@
 using BarafPaani.AI;
+using BarafPaani.Audio;
 using BarafPaani.Core;
 using BarafPaani.Gameplay;
 using BarafPaani.Gameplay.PowerUps;
@@ -64,6 +65,8 @@ namespace BarafPaani.EditorTools
             "Assets/_Project/Art/Characters/YBot/Y Bot.fbx";
 
         private const string MatchSetupPath = "Assets/_Project/Settings/MatchSetup.asset";
+
+        private const string SoundBankPath = "Assets/_Project/Settings/SoundBank.asset";
 
         private const string MinimapTexturePath =
             "Assets/_Project/Scenes/MinimapTexture.renderTexture";
@@ -152,18 +155,21 @@ namespace BarafPaani.EditorTools
             // exist before they are saved or they save a null reference.
             CharacterAnimatorBuilder.Rebuild();
 
-            // Before the characters: both of them carry a reference to it.
-            GameObject decoyPrefab = BuildDecoyPrefab();
+            SoundBuilder.Rebuild();
+            SoundBank sounds = EnsureSoundBank();
 
-            GameObject playerPrefab = BuildPlayerPrefab(decoyPrefab);
-            GameObject aiPrefab = BuildAiPrefab(decoyPrefab);
-            BuildScene(playerPrefab, aiPrefab, decoyPrefab);
+            // Before the characters: both of them carry a reference to it.
+            GameObject decoyPrefab = BuildDecoyPrefab(sounds);
+
+            GameObject playerPrefab = BuildPlayerPrefab(decoyPrefab, sounds);
+            GameObject aiPrefab = BuildAiPrefab(decoyPrefab, sounds);
+            BuildScene(playerPrefab, aiPrefab, decoyPrefab, sounds);
 
             AssetDatabase.SaveAssets();
             Debug.Log("Baraf-Paani: rebuilt the player prefab and the playable scene.");
         }
 
-        private static GameObject BuildPlayerPrefab(GameObject decoyPrefab)
+        private static GameObject BuildPlayerPrefab(GameObject decoyPrefab, SoundBank sounds)
         {
             GameObject root = new GameObject("Player");
 
@@ -180,6 +186,7 @@ namespace BarafPaani.EditorTools
             root.AddComponent<NetworkIdentity>();
 
             AddBody(root);
+            AddCharacterAudio(root, sounds);
 
             GameObject cameraTarget = new GameObject("CameraTarget");
             cameraTarget.transform.SetParent(root.transform, false);
@@ -209,6 +216,8 @@ namespace BarafPaani.EditorTools
                 root.GetComponent<CharacterAppearance>();
             freezeState.FindProperty("_animation").objectReferenceValue =
                 root.GetComponent<CharacterAnimation>();
+            freezeState.FindProperty("_audio").objectReferenceValue =
+                root.GetComponent<CharacterAudio>();
             freezeState.ApplyModifiedPropertiesWithoutUndo();
 
             root.AddComponent<TagOnContact>();
@@ -254,7 +263,7 @@ namespace BarafPaani.EditorTools
         /// and TagOnContact are shared, so an AI freezes and is freed by exactly
         /// the code that handles humans.
         /// </summary>
-        private static GameObject BuildAiPrefab(GameObject decoyPrefab)
+        private static GameObject BuildAiPrefab(GameObject decoyPrefab, SoundBank sounds)
         {
             GameObject root = new GameObject("AiCharacter");
 
@@ -282,6 +291,7 @@ namespace BarafPaani.EditorTools
             root.AddComponent<NetworkIdentity>();
 
             AddBody(root);
+            AddCharacterAudio(root, sounds);
 
             GameObject eye = new GameObject("Eye");
             eye.transform.SetParent(root.transform, false);
@@ -302,6 +312,8 @@ namespace BarafPaani.EditorTools
                 root.GetComponent<CharacterAppearance>();
             freezeState.FindProperty("_animation").objectReferenceValue =
                 root.GetComponent<CharacterAnimation>();
+            freezeState.FindProperty("_audio").objectReferenceValue =
+                root.GetComponent<CharacterAudio>();
             freezeState.ApplyModifiedPropertiesWithoutUndo();
 
             root.AddComponent<TagOnContact>();
@@ -335,7 +347,7 @@ namespace BarafPaani.EditorTools
         /// that would make it a player. No TagOnContact especially: a decoy
         /// that froze people by standing near them would be a weapon.
         /// </summary>
-        private static GameObject BuildDecoyPrefab()
+        private static GameObject BuildDecoyPrefab(SoundBank sounds)
         {
             GameObject root = new GameObject("Decoy");
 
@@ -347,6 +359,7 @@ namespace BarafPaani.EditorTools
             root.AddComponent<NetworkIdentity>();
 
             AddBody(root);
+            AddCharacterAudio(root, sounds);
 
             root.AddComponent<PlayerRole>();
 
@@ -356,6 +369,8 @@ namespace BarafPaani.EditorTools
                 root.GetComponent<CharacterAppearance>();
             freezeState.FindProperty("_animation").objectReferenceValue =
                 root.GetComponent<CharacterAnimation>();
+            freezeState.FindProperty("_audio").objectReferenceValue =
+                root.GetComponent<CharacterAudio>();
             freezeState.ApplyModifiedPropertiesWithoutUndo();
 
             // No NetworkTransform: it never moves, and Mirror already sends the
@@ -378,7 +393,10 @@ namespace BarafPaani.EditorTools
         }
 
         private static void BuildScene(
-            GameObject playerPrefab, GameObject aiPrefab, GameObject decoyPrefab)
+            GameObject playerPrefab,
+            GameObject aiPrefab,
+            GameObject decoyPrefab,
+            SoundBank sounds)
         {
             Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
 
@@ -404,9 +422,9 @@ namespace BarafPaani.EditorTools
             BuildCamera();
             BuildNetworkManager(playerPrefab, aiPrefab, decoyPrefab);
             BuildMatch();
-            BuildHud();
+            BuildHud(sounds);
             BuildSpawnPoints(surface);
-            BuildPowerUpPickups();
+            BuildPowerUpPickups(sounds);
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
@@ -503,7 +521,7 @@ namespace BarafPaani.EditorTools
         /// a building. The roof check is here too — a power-up fourteen metres
         /// up is not a power-up, it is a thing nobody can ever reach.
         /// </summary>
-        private static void BuildPowerUpPickups()
+        private static void BuildPowerUpPickups(SoundBank sounds)
         {
             int placed = 0;
 
@@ -553,6 +571,7 @@ namespace BarafPaani.EditorTools
                 // name list, which only matches the value while the enum happens
                 // to be numbered from zero with no gaps.
                 state.FindProperty("_kind").intValue = (int)PickupRing[i];
+                state.FindProperty("_sounds").objectReferenceValue = sounds;
                 state.ApplyModifiedPropertiesWithoutUndo();
 
                 placed++;
@@ -648,7 +667,7 @@ namespace BarafPaani.EditorTools
             match.AddComponent<MatchState>();
         }
 
-        private static void BuildHud()
+        private static void BuildHud(SoundBank sounds)
         {
             int mapLayer = EnsureMapLayer();
 
@@ -739,7 +758,7 @@ namespace BarafPaani.EditorTools
             viewState.FindProperty("_mapCamera").objectReferenceValue = mapCamera;
             viewState.ApplyModifiedPropertiesWithoutUndo();
 
-            BuildMatchLabels(hud);
+            BuildMatchLabels(hud, sounds);
 
             Debug.Log("HUD: circular minimap and match labels built.");
         }
@@ -753,7 +772,7 @@ namespace BarafPaani.EditorTools
         /// a menu before it will render anything, and that is a step a fresh
         /// clone would not have taken. Worth upgrading once, deliberately.
         /// </summary>
-        private static void BuildMatchLabels(GameObject hud)
+        private static void BuildMatchLabels(GameObject hud, SoundBank sounds)
         {
             // The game's own font, brought over from the original build.
             Font font = AssetDatabase.LoadAssetAtPath<Font>(MenuFontPath)
@@ -800,6 +819,20 @@ namespace BarafPaani.EditorTools
             lobbyState.FindProperty("_rosterLabel").objectReferenceValue = lobbyRoster;
             lobbyState.FindProperty("_hintLabel").objectReferenceValue = lobbyHint;
             lobbyState.ApplyModifiedPropertiesWithoutUndo();
+
+            AudioSource matchSource = hud.AddComponent<AudioSource>();
+            matchSource.playOnAwake = false;
+
+            // Flat, not positioned: a round starting is not somewhere in the
+            // street, it is an announcement.
+            matchSource.spatialBlend = 0f;
+
+            MatchAudio matchAudio = hud.AddComponent<MatchAudio>();
+
+            SerializedObject audioState = new SerializedObject(matchAudio);
+            audioState.FindProperty("_sounds").objectReferenceValue = sounds;
+            audioState.FindProperty("_source").objectReferenceValue = matchSource;
+            audioState.ApplyModifiedPropertiesWithoutUndo();
 
             MatchHud matchHud = hud.AddComponent<MatchHud>();
 
@@ -909,6 +942,90 @@ namespace BarafPaani.EditorTools
         /// the old build they drifted, and an AI ended up a different height
         /// than a human — which changes who can see whom over a wall.
         /// </summary>
+        /// <summary>
+        /// Loads the sound bank, creating it and filling it in from the audio
+        /// folders if it is not there. Built the same way as everything else, so
+        /// a fresh clone gets a wired-up bank without anyone dragging clips into
+        /// an inspector.
+        /// </summary>
+        private static SoundBank EnsureSoundBank()
+        {
+            SoundBank bank = AssetDatabase.LoadAssetAtPath<SoundBank>(SoundBankPath);
+
+            if (bank == null)
+            {
+                bank = ScriptableObject.CreateInstance<SoundBank>();
+                AssetDatabase.CreateAsset(bank, SoundBankPath);
+            }
+
+            SerializedObject state = new SerializedObject(bank);
+
+            Assign(state, "_freeze", "Generated/Freeze");
+            Assign(state, "_thaw", "Generated/Thaw");
+            Assign(state, "_pickup", "Generated/Pickup");
+            Assign(state, "_powerUp", "Generated/PowerUp");
+            Assign(state, "_roundStart", "Generated/RoundStart");
+            Assign(state, "_roundWon", "Generated/RoundWon");
+            Assign(state, "_roundLost", "Generated/RoundLost");
+            Assign(state, "_click", "Generated/Click");
+            Assign(state, "_land", "Footsteps/Player_Land");
+
+            SerializedProperty footsteps = state.FindProperty("_footsteps");
+            footsteps.arraySize = 10;
+
+            for (int i = 0; i < 10; i++)
+            {
+                footsteps.GetArrayElementAtIndex(i).objectReferenceValue =
+                    Clip($"Footsteps/Player_Footstep_{i + 1:00}");
+            }
+
+            state.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(bank);
+
+            return bank;
+        }
+
+        private static void Assign(SerializedObject state, string field, string clip)
+        {
+            state.FindProperty(field).objectReferenceValue = Clip(clip);
+        }
+
+        private static AudioClip Clip(string relative)
+        {
+            string path = $"Assets/_Project/Audio/{relative}.wav";
+            AudioClip clip = AssetDatabase.LoadAssetAtPath<AudioClip>(path);
+
+            if (clip == null)
+            {
+                Debug.LogWarning($"Baraf-Paani: no audio clip at {path}.");
+            }
+
+            return clip;
+        }
+
+        /// <summary>
+        /// Gives a character a voice: one spatial source, and the component that
+        /// decides what comes out of it.
+        /// </summary>
+        private static void AddCharacterAudio(GameObject root, SoundBank sounds)
+        {
+            AudioSource source = root.AddComponent<AudioSource>();
+            source.playOnAwake = false;
+
+            // Fully 3D, so you can hear which direction someone is running from.
+            source.spatialBlend = 1f;
+            source.rolloffMode = AudioRolloffMode.Linear;
+            source.minDistance = 2f;
+            source.maxDistance = 30f;
+
+            CharacterAudio audio = root.AddComponent<CharacterAudio>();
+
+            SerializedObject state = new SerializedObject(audio);
+            state.FindProperty("_sounds").objectReferenceValue = sounds;
+            state.FindProperty("_source").objectReferenceValue = source;
+            state.ApplyModifiedPropertiesWithoutUndo();
+        }
+
         private static void AddBody(GameObject root)
         {
             GameObject modelAsset = AssetDatabase.LoadAssetAtPath<GameObject>(CharacterModelPath);

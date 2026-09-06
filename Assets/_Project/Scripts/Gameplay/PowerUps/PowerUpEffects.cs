@@ -55,6 +55,7 @@ namespace BarafPaani.Gameplay.PowerUps
         private PlayerMotor _motor;
         private NavMeshAgent _agent;
         private CharacterAppearance _appearance;
+        private BarafPaani.Audio.CharacterAudio _audio;
         private float _agentBaseSpeed = -1f;
 
         // What has actually been applied, so the hook and the server can both
@@ -94,6 +95,7 @@ namespace BarafPaani.Gameplay.PowerUps
             _motor = GetComponent<PlayerMotor>();
             _agent = GetComponent<NavMeshAgent>();
             _appearance = GetComponent<CharacterAppearance>();
+            _audio = GetComponent<BarafPaani.Audio.CharacterAudio>();
 
             if (_agent != null)
             {
@@ -123,6 +125,31 @@ namespace BarafPaani.Gameplay.PowerUps
         /// </summary>
         [Server]
         public bool Begin(PowerUpKind kind)
+        {
+            bool started = Start(kind);
+
+            if (started)
+            {
+                // An Rpc rather than a SyncVar hook: the clone has no flag of
+                // its own to change, so there would be nothing for a hook to
+                // fire on and one of the three would be silent.
+                RpcPlayedPowerUp();
+            }
+
+            return started;
+        }
+
+        [ClientRpc]
+        private void RpcPlayedPowerUp()
+        {
+            if (_audio != null)
+            {
+                _audio.PlayPowerUp();
+            }
+        }
+
+        [Server]
+        private bool Start(PowerUpKind kind)
         {
             switch (kind)
             {

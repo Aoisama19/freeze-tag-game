@@ -28,6 +28,10 @@ namespace BarafPaani.Gameplay
         [Tooltip("Stopped mid-stride while frozen.")]
         private CharacterAnimation _animation;
 
+        [SerializeField]
+        [Tooltip("Chimes on the way in and out.")]
+        private Audio.CharacterAudio _audio;
+
         [SyncVar(hook = nameof(OnIsFrozenChanged))]
         private bool _isFrozen;
 
@@ -53,6 +57,11 @@ namespace BarafPaani.Gameplay
             if (_animation == null)
             {
                 _animation = GetComponent<CharacterAnimation>();
+            }
+
+            if (_audio == null)
+            {
+                _audio = GetComponent<Audio.CharacterAudio>();
             }
         }
 
@@ -117,6 +126,11 @@ namespace BarafPaani.Gameplay
                 return;
             }
 
+            // Whether this is a change or the state the character arrived in.
+            // Spawning is not something to make a noise about — without this,
+            // every character thaws audibly the moment it appears.
+            bool changed = _applied.HasValue;
+
             _applied = frozen;
 
             if (_motor != null)
@@ -132,6 +146,11 @@ namespace BarafPaani.Gameplay
             if (_animation != null)
             {
                 _animation.SetFrozen(frozen);
+            }
+
+            if (changed && _audio != null)
+            {
+                _audio.PlayFrozen(frozen);
             }
         }
     }
