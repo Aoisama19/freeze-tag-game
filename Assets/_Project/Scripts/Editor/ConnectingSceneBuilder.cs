@@ -83,7 +83,7 @@ namespace BarafPaani.EditorTools
             SettingsApplier volume = canvasObject.AddComponent<SettingsApplier>();
             SerializedObject volumeState = new SerializedObject(volume);
             volumeState.FindProperty("_settings").objectReferenceValue =
-                MainMenuBuilder.EnsureSettings();
+                SettingsUiBuilder.EnsureSettings();
             volumeState.ApplyModifiedPropertiesWithoutUndo();
 
             ConnectingScreen screen = canvasObject.AddComponent<ConnectingScreen>();

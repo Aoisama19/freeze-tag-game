@@ -319,6 +319,16 @@ every frame of a drag, because `PlayerPrefs.Save` writes to disk. The *effect* i
 applied live as the slider moves, since volume is impossible to set sensibly if
 you cannot hear the result until afterwards.
 
+The overlay itself is built by one shared builder used by both the main menu and
+the in-game menu. Two copies laid out separately would drift the first time
+either gained an option — the same reason the maps come from one table rather
+than four copies of a builder. In game it is built after the pause panel, so it
+is the later sibling, which in UGUI is what puts it in front rather than behind.
+
+Escape backs out one layer at a time: pressed over the settings it closes those
+and leaves the pause menu up, rather than dropping the player back into a match
+they were not looking at. Closing the pause menu closes the settings with it.
+
 `SettingsApplier` sits in the menu, the join screen and every map. Volume has to
 hold everywhere or the game would be quiet on the menu and loud the moment a
 match loaded. Sensitivity only means anything where there is a camera to turn,

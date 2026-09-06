@@ -957,13 +957,8 @@ namespace BarafPaani.EditorTools
 
             BuildInGameMenu(hud, font);
 
-            // Volume and look sensitivity are settings the menu owns, but they
-            // have to be put into effect wherever the game actually is.
-            SettingsApplier applier = hud.AddComponent<SettingsApplier>();
-            SerializedObject applierState = new SerializedObject(applier);
-            applierState.FindProperty("_settings").objectReferenceValue =
-                MainMenuBuilder.EnsureSettings();
-            applierState.ApplyModifiedPropertiesWithoutUndo();
+            // The applier comes with the settings overlay now, which BuildInGameMenu
+            // puts on this same canvas.
 
             Text score = MakeLabel(hud, "ScoreLabel", font, 20, TextAnchor.UpperRight);
             Place(score.rectTransform, new Vector2(1f, 1f), new Vector2(-24f, -24f),
@@ -1023,22 +1018,28 @@ namespace BarafPaani.EditorTools
                 new Vector2(600f, 56f));
             heading.text = "PAUSED";
 
-            Button resume = MakeHudButton(panel, "ResumeButton", font, "RESUME", 60f);
-            Button leave = MakeHudButton(panel, "LeaveButton", font, "LEAVE MATCH", -30f);
-            Button quit = MakeHudButton(panel, "QuitButton", font, "QUIT GAME", -120f);
+            Button resume = MakeHudButton(panel, "ResumeButton", font, "RESUME", 100f);
+            Button settingsButton = MakeHudButton(panel, "SettingsButton", font, "SETTINGS", 10f);
+            Button leave = MakeHudButton(panel, "LeaveButton", font, "LEAVE MATCH", -80f);
+            Button quit = MakeHudButton(panel, "QuitButton", font, "QUIT GAME", -170f);
 
             Text hint = MakeLabel(panel, "Hint", font, 18, TextAnchor.MiddleCenter);
-            Place(hint.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, -210f),
+            Place(hint.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, -250f),
                 new Vector2(700f, 30f));
             hint.text = "The match keeps running while this is open";
 
             InGameMenu menu = hud.AddComponent<InGameMenu>();
+
+            // Built after the pause panel, so it is the later sibling and draws
+            // in front of it rather than behind.
+            SettingsPanel settings = SettingsUiBuilder.Build(hud, font, settingsButton);
 
             SerializedObject state = new SerializedObject(menu);
             state.FindProperty("_panel").objectReferenceValue = panel;
             state.FindProperty("_resumeButton").objectReferenceValue = resume;
             state.FindProperty("_leaveButton").objectReferenceValue = leave;
             state.FindProperty("_quitButton").objectReferenceValue = quit;
+            state.FindProperty("_settings").objectReferenceValue = settings;
             state.ApplyModifiedPropertiesWithoutUndo();
 
             panel.SetActive(false);

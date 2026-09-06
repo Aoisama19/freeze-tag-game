@@ -113,6 +113,33 @@ namespace BarafPaani.Tests
                     Object.FindFirstObjectByType<SettingsApplier>(),
                     $"{map} ignores the settings entirely");
 
+                // The same settings are reachable without leaving the match.
+                // Built inactive, so the menu's overlap and off-screen tests
+                // cannot see this panel at all — it needs checking directly or
+                // it is not checked by anything.
+                SettingsPanel settings = Object.FindFirstObjectByType<SettingsPanel>();
+                Assert.IsNotNull(settings, $"{map} has no settings behind Escape");
+
+                foreach (string field in new[]
+                         {
+                             "_openButton", "_closeButton", "_volumeSlider", "_sensitivitySlider",
+                         })
+                {
+                    Assert.IsNotNull(
+                        typeof(SettingsPanel)
+                            .GetField(field, BindingFlags.NonPublic | BindingFlags.Instance)
+                            .GetValue(settings),
+                        $"{map}: the in-game settings have no {field}");
+                }
+
+                GameObject settingsPanel = (GameObject)typeof(SettingsPanel)
+                    .GetField("_panel", BindingFlags.NonPublic | BindingFlags.Instance)
+                    .GetValue(settings);
+
+                Assert.IsNotNull(settingsPanel);
+                Assert.IsFalse(
+                    settingsPanel.activeSelf, $"{map} opens with the settings already covering it");
+
                 InGameMenu inGame = Object.FindFirstObjectByType<InGameMenu>();
                 Assert.IsNotNull(inGame, $"{map} has no way out except closing the game");
 
@@ -121,6 +148,16 @@ namespace BarafPaani.Tests
                     .GetValue(inGame);
 
                 Assert.IsNotNull(panel, $"{map} has an in-game menu with nothing in it");
+
+                // Escape closes the settings before this menu, and closing this
+                // menu closes them. Both depend on this reference: unset, the
+                // settings would be left hanging over the match and nothing
+                // would report it.
+                Assert.IsNotNull(
+                    typeof(InGameMenu)
+                        .GetField("_settings", BindingFlags.NonPublic | BindingFlags.Instance)
+                        .GetValue(inGame),
+                    $"{map}: the pause menu does not know about its own settings panel");
                 Assert.IsFalse(
                     panel.activeSelf, $"{map} starts with the pause menu already covering the screen");
 

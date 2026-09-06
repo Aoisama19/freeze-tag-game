@@ -44,6 +44,18 @@ namespace BarafPaani.UI
         [SerializeField]
         private Text _sensitivityLabel;
 
+        /// <summary>Whether the overlay is currently covering what is behind it.</summary>
+        public bool IsOpen => _panel != null && _panel.activeSelf;
+
+        /// <summary>
+        /// Shuts the overlay and writes the values down. Public so the in-game
+        /// menu can close it when Escape is pressed over the top of it.
+        /// </summary>
+        public void CloseNow()
+        {
+            Close();
+        }
+
         private void Start()
         {
             if (_settings != null)

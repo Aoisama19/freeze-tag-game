@@ -38,6 +38,10 @@ namespace BarafPaani.UI
         private Button _quitButton;
 
         [SerializeField]
+        [Tooltip("Opened from here, and closed by Escape before this menu is.")]
+        private SettingsPanel _settings;
+
+        [SerializeField]
         private string _menuScene = "MainMenu";
 
         private InputAction _toggle;
@@ -81,10 +85,21 @@ namespace BarafPaani.UI
 
         private void Update()
         {
-            if (_toggle.WasPressedThisFrame())
+            if (!_toggle.WasPressedThisFrame())
             {
-                Show(!_open);
+                return;
             }
+
+            // Escape backs out one layer at a time. Pressed over the settings it
+            // closes those and leaves this menu up, rather than dropping the
+            // player straight back into a match they were not looking at.
+            if (_settings != null && _settings.IsOpen)
+            {
+                _settings.CloseNow();
+                return;
+            }
+
+            Show(!_open);
         }
 
         private void Close() => Show(false);
@@ -92,6 +107,13 @@ namespace BarafPaani.UI
         private void Show(bool open)
         {
             _open = open;
+
+            // Closing this closes what it opened, or the settings would be left
+            // hanging over the match with no menu behind them.
+            if (!open && _settings != null && _settings.IsOpen)
+            {
+                _settings.CloseNow();
+            }
 
             if (_panel != null)
             {
