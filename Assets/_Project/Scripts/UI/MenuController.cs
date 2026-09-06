@@ -48,6 +48,17 @@ namespace BarafPaani.UI
         [SerializeField]
         private Text _mapLabel;
 
+        [SerializeField]
+        [Tooltip("Shows the chosen map. Rendered from the maps themselves by MapPreviewBuilder.")]
+        private Image _mapPreview;
+
+        [SerializeField]
+        [Tooltip("Scene names, paired by index with the pictures below.")]
+        private string[] _previewScenes;
+
+        [SerializeField]
+        private Sprite[] _previewImages;
+
         [Header("Round")]
         [SerializeField]
         private Button _roundButton;
@@ -196,8 +207,10 @@ namespace BarafPaani.UI
 
             if (_mapLabel != null)
             {
-                _mapLabel.text = $"Map    {Pretty(_maps[_map])}";
+                _mapLabel.text = Pretty(_maps[_map]);
             }
+
+            ShowPreview(_maps[_map]);
         }
 
         private void FindRoundLength()
@@ -239,6 +252,38 @@ namespace BarafPaani.UI
             int whole = Mathf.RoundToInt(seconds / 60f);
 
             return whole == 1 ? "1 minute" : $"{whole} minutes";
+        }
+
+        /// <summary>
+        /// Finds this map's picture by name rather than by position.
+        ///
+        /// The map list is discovered from the build settings at runtime and the
+        /// pictures are assigned when the menu is built, so the two orders are
+        /// arrived at separately and matching them by index would pair a name
+        /// with the wrong map the first time either one changed.
+        /// </summary>
+        private void ShowPreview(string scene)
+        {
+            if (_mapPreview == null || _previewScenes == null || _previewImages == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _previewScenes.Length && i < _previewImages.Length; i++)
+            {
+                if (_previewScenes[i] != scene)
+                {
+                    continue;
+                }
+
+                _mapPreview.sprite = _previewImages[i];
+                _mapPreview.enabled = _previewImages[i] != null;
+
+                return;
+            }
+
+            // A map with no picture shows nothing rather than the last map's.
+            _mapPreview.enabled = false;
         }
 
         /// <summary>Turns a scene name like Game_BadshahiMasjid into "Badshahi Masjid".</summary>

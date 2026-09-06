@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using System.Collections;
+using System.Collections.Generic;
 using System.Reflection;
 using BarafPaani.Core;
 using BarafPaani.Gameplay;
@@ -163,6 +164,98 @@ namespace BarafPaani.Tests
 
             // Leave nothing behind for the next test to trip over.
             setup.ClearRequest();
+        }
+
+        [UnityTest]
+        public IEnumerator No_two_controls_sit_on_top_of_each_other()
+        {
+            // The layout is written as hand-placed coordinates, and a control
+            // added into what looked like a free gap has landed on another one
+            // before now. Overlapping controls do not throw or log anything —
+            // one of them simply stops being clickable, and only in the corner
+            // where they cross.
+            yield return LoadMenu();
+
+            List<(string name, Rect rect)> controls = new List<(string, Rect)>();
+
+            foreach (Selectable control in
+                     Object.FindObjectsByType<Selectable>(FindObjectsSortMode.None))
+            {
+                RectTransform rect = control.GetComponent<RectTransform>();
+
+                if (rect != null)
+                {
+                    controls.Add((control.name, ScreenRect(rect)));
+                }
+            }
+
+            Assert.Greater(controls.Count, 4, "the menu has almost no controls in it");
+
+            for (int i = 0; i < controls.Count; i++)
+            {
+                for (int j = i + 1; j < controls.Count; j++)
+                {
+                    // Children of another control are meant to sit inside it.
+                    if (controls[i].rect.Overlaps(controls[j].rect))
+                    {
+                        Assert.Fail(
+                            $"{controls[i].name} and {controls[j].name} overlap: "
+                            + $"{controls[i].rect} vs {controls[j].rect}");
+                    }
+                }
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator Every_control_is_on_the_screen()
+        {
+            // A control placed off the edge is as good as missing, and nothing
+            // reports it.
+            yield return LoadMenu();
+
+            Rect screen = new Rect(0f, 0f, Screen.width, Screen.height);
+
+            foreach (Selectable control in
+                     Object.FindObjectsByType<Selectable>(FindObjectsSortMode.None))
+            {
+                RectTransform rect = control.GetComponent<RectTransform>();
+
+                if (rect == null)
+                {
+                    continue;
+                }
+
+                Rect where = ScreenRect(rect);
+
+                Assert.IsTrue(
+                    screen.Overlaps(where),
+                    $"{control.name} is off the screen at {where}");
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator The_chosen_map_has_a_picture()
+        {
+            yield return LoadMenu();
+
+            MenuController menu = Object.FindFirstObjectByType<MenuController>();
+            Image preview = Field<Image>(menu, "_mapPreview");
+
+            Assert.IsNotNull(preview, "the menu has nowhere to show a map");
+            Assert.IsNotNull(preview.sprite, "no picture for the map it opened on");
+            Assert.IsTrue(preview.enabled, "the picture is there but not being drawn");
+        }
+
+        private static Rect ScreenRect(RectTransform rect)
+        {
+            Vector3[] corners = new Vector3[4];
+            rect.GetWorldCorners(corners);
+
+            return new Rect(
+                corners[0].x,
+                corners[0].y,
+                corners[2].x - corners[0].x,
+                corners[2].y - corners[0].y);
         }
     }
 }

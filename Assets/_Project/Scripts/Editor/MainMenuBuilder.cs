@@ -53,67 +53,100 @@ namespace BarafPaani.EditorTools
 
             BuildEventSystem();
 
-            BuildBackground(canvasObject);
-            Text title = MakeText(canvasObject, "Title", font, 90, TextAnchor.MiddleCenter);
-            Place(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -110f), new Vector2(1200f, 120f));
+            RectTransform backdrop = BuildBackground(canvasObject);
+            backdrop.gameObject.AddComponent<BackgroundDrift>();
+
+            // A dark wash over the photograph. Without it every label has to
+            // fight the background for contrast, which is what made the old
+            // layout read as washed out.
+            MakePanel(canvasObject, "Shade", Vector2.zero, new Vector2(2200f, 1400f),
+                null, new Color(0.03f, 0.05f, 0.09f, 0.55f));
+
+            Text title = MakeText(canvasObject, "Title", font, 86, TextAnchor.MiddleCenter);
+            Place(title.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 396f),
+                new Vector2(1200f, 110f));
             title.text = "BARAF-PAANI";
 
-            Text roleLabel = MakeText(canvasObject, "RoleLabel", font, 30, TextAnchor.MiddleCenter);
-            Place(roleLabel.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 200f), new Vector2(900f, 44f));
+            Sprite panelPlate = Sprite("MAPSelect_Rectangle_52.png");
+
+            // ---------------------------------------------------------- left
+            MakePanel(canvasObject, "SettingsPanel", new Vector2(-472f, 34f),
+                new Vector2(500f, 500f), panelPlate, new Color(1f, 1f, 1f, 0.16f));
+
+            Text sideHeading = MakeText(canvasObject, "SideHeading", font, 24, TextAnchor.MiddleCenter);
+            Place(sideHeading.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(-472f, 236f),
+                new Vector2(460f, 32f));
+            sideHeading.text = "YOUR SIDE";
 
             Button catcher = MakeButton(canvasObject, "CatcherButton", font, "CATCHER",
-                new Vector2(0.5f, 0.5f), new Vector2(-150f, 120f), new Vector2(260f, 70f),
+                new Vector2(0.5f, 0.5f), new Vector2(-590f, 168f), new Vector2(220f, 68f),
                 Sprite("PlayerType_people.png"));
 
             Button runner = MakeButton(canvasObject, "RunnerButton", font, "RUNNER",
-                new Vector2(0.5f, 0.5f), new Vector2(150f, 120f), new Vector2(260f, 70f),
+                new Vector2(0.5f, 0.5f), new Vector2(-354f, 168f), new Vector2(220f, 68f),
                 Sprite("PlayerType_Runner.png"));
 
+            Text roleLabel = MakeText(canvasObject, "RoleLabel", font, 22, TextAnchor.MiddleCenter);
+            Place(roleLabel.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(-472f, 104f),
+                new Vector2(460f, 34f));
+
+            Toggle botsToggle = MakeToggle(canvasObject, font, "FillWithBotsToggle", "FILL WITH BOTS",
+                new Vector2(-540f, 40f));
+
+            Text botsLabel = MakeText(canvasObject, "BotsLabel", font, 19, TextAnchor.MiddleCenter);
+            Place(botsLabel.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(-472f, -4f),
+                new Vector2(460f, 28f));
+
+            InputField botCount = MakeNumberField(canvasObject, font);
+            Place(botCount.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f),
+                new Vector2(-472f, -48f), new Vector2(96f, 44f));
+
+            Button roundButton = MakeButton(canvasObject, "RoundButton", font, "ROUND",
+                new Vector2(0.5f, 0.5f), new Vector2(-580f, -136f), new Vector2(200f, 52f),
+                Sprite("Modesbtns_Rectangle_55.png"));
+
+            Text roundLabel = MakeText(canvasObject, "RoundLabel", font, 21, TextAnchor.MiddleLeft);
+            Place(roundLabel.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(-350f, -136f),
+                new Vector2(260f, 30f));
+
+            // --------------------------------------------------------- right
+            MakePanel(canvasObject, "MapPanel", new Vector2(468f, 60f),
+                new Vector2(540f, 448f), panelPlate, new Color(1f, 1f, 1f, 0.16f));
+
+            Text mapHeading = MakeText(canvasObject, "MapHeading", font, 24, TextAnchor.MiddleCenter);
+            Place(mapHeading.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(468f, 244f),
+                new Vector2(500f, 32f));
+            mapHeading.text = "MAP";
+
+            Image mapPreview = MakePicture(canvasObject, "MapPreview",
+                new Vector2(468f, 112f), new Vector2(496f, 236f));
+
+            Text mapLabel = MakeText(canvasObject, "MapLabel", font, 26, TextAnchor.MiddleCenter);
+            Place(mapLabel.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(468f, -38f),
+                new Vector2(500f, 36f));
+
+            Button mapButton = MakeButton(canvasObject, "MapButton", font, "CHANGE MAP",
+                new Vector2(0.5f, 0.5f), new Vector2(468f, -104f), new Vector2(260f, 54f),
+                Sprite("Modesbtns_Rectangle_55.png"));
+
+            // -------------------------------------------------------- centre
             Sprite playPlate = Sprite("Playbtn_Rectangle_55.png");
 
             Button single = MakeButton(canvasObject, "SinglePlayerButton", font, "PLAY ALONE",
-                new Vector2(0.5f, 0.5f), new Vector2(0f, 10f), new Vector2(420f, 76f), playPlate);
+                new Vector2(0.5f, 0.5f), new Vector2(0f, 132f), new Vector2(400f, 86f), playPlate);
 
             Button host = MakeButton(canvasObject, "HostButton", font, "HOST A MATCH",
-                new Vector2(0.5f, 0.5f), new Vector2(0f, -80f), new Vector2(420f, 76f), playPlate);
+                new Vector2(0.5f, 0.5f), new Vector2(0f, 30f), new Vector2(400f, 86f), playPlate);
 
             Button join = MakeButton(canvasObject, "JoinButton", font, "JOIN",
-                new Vector2(0.5f, 0.5f), new Vector2(-110f, -170f), new Vector2(200f, 76f), playPlate);
+                new Vector2(0.5f, 0.5f), new Vector2(0f, -72f), new Vector2(400f, 86f), playPlate);
 
             InputField address = MakeAddressField(canvasObject, font);
-
-            Toggle botsToggle = MakeToggle(canvasObject, font, "FillWithBotsToggle", "FILL WITH BOTS",
-                new Vector2(-150f, 60f));
-
-            Text botsLabel = MakeText(canvasObject, "BotsLabel", font, 20, TextAnchor.MiddleRight);
-            Place(botsLabel.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(90f, 60f),
-                new Vector2(300f, 30f));
-
-            InputField botCount = MakeNumberField(canvasObject, font);
-
-            // Cycles rather than a row of buttons: the list comes from the build
-            // settings at runtime, so the menu cannot know how many there will
-            // be to lay out.
-            // Below the join row, which is the last thing occupying the middle.
-            // Everything above y=-208 is already taken by a button.
-            Button mapButton = MakeButton(canvasObject, "MapButton", font, "MAP",
-                new Vector2(0.5f, 0.5f), new Vector2(-150f, -250f), new Vector2(220f, 44f),
-                Sprite("Modesbtns_Rectangle_55.png"));
-
-            Text mapLabel = MakeText(canvasObject, "MapLabel", font, 20, TextAnchor.MiddleLeft);
-            Place(mapLabel.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(60f, -250f),
-                new Vector2(360f, 30f));
-
-            Button roundButton = MakeButton(canvasObject, "RoundButton", font, "ROUND",
-                new Vector2(0.5f, 0.5f), new Vector2(-150f, -310f), new Vector2(220f, 44f),
-                Sprite("Modesbtns_Rectangle_55.png"));
-
-            Text roundLabel = MakeText(canvasObject, "RoundLabel", font, 20, TextAnchor.MiddleLeft);
-            Place(roundLabel.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(60f, -310f),
-                new Vector2(360f, 30f));
+            Place(address.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f),
+                new Vector2(0f, -158f), new Vector2(400f, 52f));
 
             Button quit = MakeButton(canvasObject, "QuitButton", font, "QUIT",
-                new Vector2(0.5f, 0f), new Vector2(0f, 70f), new Vector2(220f, 60f),
+                new Vector2(0.5f, 0.5f), new Vector2(0f, -300f), new Vector2(240f, 66f),
                 Sprite("Quitbtn_Rectangle_56.png"));
 
             MenuController controller = canvasObject.AddComponent<MenuController>();
@@ -145,10 +178,29 @@ namespace BarafPaani.EditorTools
             state.FindProperty("_botsLabel").objectReferenceValue = botsLabel;
             state.FindProperty("_mapButton").objectReferenceValue = mapButton;
             state.FindProperty("_mapLabel").objectReferenceValue = mapLabel;
+            state.FindProperty("_mapPreview").objectReferenceValue = mapPreview;
+            AssignPreviews(state);
             state.FindProperty("_roundButton").objectReferenceValue = roundButton;
             state.FindProperty("_roundLabel").objectReferenceValue = roundLabel;
             state.FindProperty("_quitButton").objectReferenceValue = quit;
             state.ApplyModifiedPropertiesWithoutUndo();
+
+            AddFeel(catcher, runner, single, host, join, mapButton, roundButton, quit);
+
+            BuildIntro(canvasObject, new RectTransform[]
+            {
+                title.rectTransform,
+                sideHeading.rectTransform,
+                catcher.GetComponent<RectTransform>(),
+                runner.GetComponent<RectTransform>(),
+                mapHeading.rectTransform,
+                mapPreview.rectTransform,
+                mapButton.GetComponent<RectTransform>(),
+                single.GetComponent<RectTransform>(),
+                host.GetComponent<RectTransform>(),
+                join.GetComponent<RectTransform>(),
+                quit.GetComponent<RectTransform>(),
+            });
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -233,6 +285,111 @@ namespace BarafPaani.EditorTools
             return AssetDatabase.LoadAssetAtPath<MatchSetup>(SetupPath);
         }
 
+        /// <summary>
+        /// Pairs each map's scene with the picture rendered from it, by name.
+        /// Missing pictures are left out rather than paired wrongly.
+        /// </summary>
+        private static void AssignPreviews(SerializedObject state)
+        {
+            List<string> scenes = new List<string>();
+            List<Sprite> images = new List<Sprite>();
+
+            foreach (string path in Directory.GetFiles(
+                         "Assets/_Project/Scenes", "Game_*.unity"))
+            {
+                string name = Path.GetFileNameWithoutExtension(path);
+                Sprite image = AssetDatabase.LoadAssetAtPath<Sprite>(
+                    $"Assets/_Project/Art/UI/MapPreviews/{name}.png");
+
+                if (image == null)
+                {
+                    Debug.LogWarning($"No preview rendered for {name}.");
+                    continue;
+                }
+
+                scenes.Add(name);
+                images.Add(image);
+            }
+
+            SerializedProperty sceneList = state.FindProperty("_previewScenes");
+            SerializedProperty imageList = state.FindProperty("_previewImages");
+
+            sceneList.arraySize = scenes.Count;
+            imageList.arraySize = images.Count;
+
+            for (int i = 0; i < scenes.Count; i++)
+            {
+                sceneList.GetArrayElementAtIndex(i).stringValue = scenes[i];
+                imageList.GetArrayElementAtIndex(i).objectReferenceValue = images[i];
+            }
+        }
+
+        /// <summary>A plate to sit a group of controls on, so they read as a group.</summary>
+        private static Image MakePanel(
+            GameObject canvas, string name, Vector2 position, Vector2 size, Sprite plate, Color tint)
+        {
+            GameObject panel = new GameObject(name);
+            panel.transform.SetParent(canvas.transform, false);
+
+            RectTransform rect = panel.AddComponent<RectTransform>();
+            Place(rect, new Vector2(0.5f, 0.5f), position, size);
+
+            Image image = panel.AddComponent<Image>();
+            image.sprite = plate;
+            image.color = tint;
+            image.raycastTarget = false;
+
+            if (plate != null)
+            {
+                image.type = Image.Type.Sliced;
+            }
+
+            return image;
+        }
+
+        private static Image MakePicture(
+            GameObject canvas, string name, Vector2 position, Vector2 size)
+        {
+            GameObject picture = new GameObject(name);
+            picture.transform.SetParent(canvas.transform, false);
+
+            RectTransform rect = picture.AddComponent<RectTransform>();
+            Place(rect, new Vector2(0.5f, 0.5f), position, size);
+
+            Image image = picture.AddComponent<Image>();
+            image.preserveAspect = true;
+            image.raycastTarget = false;
+
+            return image;
+        }
+
+        private static void AddFeel(params Button[] buttons)
+        {
+            foreach (Button button in buttons)
+            {
+                if (button != null)
+                {
+                    button.gameObject.AddComponent<ButtonFeel>();
+                }
+            }
+        }
+
+        private static void BuildIntro(GameObject canvas, RectTransform[] pieces)
+        {
+            MenuIntro intro = canvas.AddComponent<MenuIntro>();
+
+            SerializedObject state = new SerializedObject(intro);
+            SerializedProperty list = state.FindProperty("_pieces");
+            list.arraySize = pieces.Length;
+
+            for (int i = 0; i < pieces.Length; i++)
+            {
+                list.GetArrayElementAtIndex(i).objectReferenceValue = pieces[i];
+            }
+
+            state.ApplyModifiedPropertiesWithoutUndo();
+        }
+
         private static Sprite Sprite(string file)
         {
             Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(ArtRoot + file);
@@ -245,7 +402,7 @@ namespace BarafPaani.EditorTools
             return sprite;
         }
 
-        private static void BuildBackground(GameObject canvas)
+        private static RectTransform BuildBackground(GameObject canvas)
         {
             GameObject background = new GameObject("Background");
             background.transform.SetParent(canvas.transform, false);
@@ -270,6 +427,8 @@ namespace BarafPaani.EditorTools
             }
 
             image.raycastTarget = false;
+
+            return rect;
         }
 
         private static Button MakeButton(
