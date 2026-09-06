@@ -52,6 +52,14 @@ namespace BarafPaani.EditorTools
 
         private const string MenuFontPath = "Assets/_Project/Art/UI/Fonts/Orbitron.ttf";
 
+        /// <summary>
+        /// The character everyone wears. One model for both sides, told apart by
+        /// colour rather than by shape, so the two are always the same size and
+        /// nobody can read an advantage off the silhouette.
+        /// </summary>
+        private const string CharacterModelPath =
+            "Assets/_Project/Art/Characters/YBot/Y Bot.fbx";
+
         private const string MatchSetupPath = "Assets/_Project/Settings/MatchSetup.asset";
 
         private const string MinimapTexturePath =
@@ -117,6 +125,10 @@ namespace BarafPaani.EditorTools
         [MenuItem("Baraf-Paani/Rebuild Playable Scene")]
         public static void Rebuild()
         {
+            // Built first: both prefabs point at the controller, so it has to
+            // exist before they are saved or they save a null reference.
+            CharacterAnimatorBuilder.Rebuild();
+
             GameObject playerPrefab = BuildPlayerPrefab();
             GameObject aiPrefab = BuildAiPrefab();
             BuildScene(playerPrefab, aiPrefab);
@@ -134,20 +146,18 @@ namespace BarafPaani.EditorTools
             controller.radius = 0.35f;
             controller.center = new Vector3(0f, 1f, 0f);
 
-            // Placeholder body. Real avatars get baked to prefabs later; the old
-            // build loaded them at runtime from Ready Player Me, which is exactly
-            // the dependency we dropped.
-            GameObject body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            body.name = "Body";
-            body.transform.SetParent(root.transform, false);
-            body.transform.localPosition = new Vector3(0f, 1f, 0f);
-            Object.DestroyImmediate(body.GetComponent<CapsuleCollider>());
+            // Added before the body, because the body brings CharacterAppearance
+            // with it and a NetworkBehaviour has to find an identity on the way
+            // in. Adding it afterwards still saves a working prefab, but Mirror
+            // complains on every rebuild, and a warning nobody can act on is a
+            // warning everyone learns to scroll past.
+            root.AddComponent<NetworkIdentity>();
+
+            AddBody(root);
 
             GameObject cameraTarget = new GameObject("CameraTarget");
             cameraTarget.transform.SetParent(root.transform, false);
             cameraTarget.transform.localPosition = new Vector3(0f, 1.6f, 0f);
-
-            root.AddComponent<NetworkIdentity>();
 
             NetworkTransformReliable sync = root.AddComponent<NetworkTransformReliable>();
             sync.target = root.transform;
@@ -168,8 +178,11 @@ namespace BarafPaani.EditorTools
 
             Freezable freezable = root.AddComponent<Freezable>();
             SerializedObject freezeState = new SerializedObject(freezable);
-            freezeState.FindProperty("_bodyRenderer").objectReferenceValue = body.GetComponent<Renderer>();
             freezeState.FindProperty("_motor").objectReferenceValue = motor;
+            freezeState.FindProperty("_appearance").objectReferenceValue =
+                root.GetComponent<CharacterAppearance>();
+            freezeState.FindProperty("_animation").objectReferenceValue =
+                root.GetComponent<CharacterAnimation>();
             freezeState.ApplyModifiedPropertiesWithoutUndo();
 
             root.AddComponent<TagOnContact>();
@@ -231,17 +244,18 @@ namespace BarafPaani.EditorTools
             agent.acceleration = 20f;
             agent.stoppingDistance = 0.6f;
 
-            GameObject body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            body.name = "Body";
-            body.transform.SetParent(root.transform, false);
-            body.transform.localPosition = new Vector3(0f, 1f, 0f);
-            Object.DestroyImmediate(body.GetComponent<CapsuleCollider>());
+            // Added before the body, because the body brings CharacterAppearance
+            // with it and a NetworkBehaviour has to find an identity on the way
+            // in. Adding it afterwards still saves a working prefab, but Mirror
+            // complains on every rebuild, and a warning nobody can act on is a
+            // warning everyone learns to scroll past.
+            root.AddComponent<NetworkIdentity>();
+
+            AddBody(root);
 
             GameObject eye = new GameObject("Eye");
             eye.transform.SetParent(root.transform, false);
             eye.transform.localPosition = new Vector3(0f, 1.6f, 0f);
-
-            root.AddComponent<NetworkIdentity>();
 
             NetworkTransformReliable sync = root.AddComponent<NetworkTransformReliable>();
             sync.target = root.transform;
@@ -254,7 +268,10 @@ namespace BarafPaani.EditorTools
 
             Freezable freezable = root.AddComponent<Freezable>();
             SerializedObject freezeState = new SerializedObject(freezable);
-            freezeState.FindProperty("_bodyRenderer").objectReferenceValue = body.GetComponent<Renderer>();
+            freezeState.FindProperty("_appearance").objectReferenceValue =
+                root.GetComponent<CharacterAppearance>();
+            freezeState.FindProperty("_animation").objectReferenceValue =
+                root.GetComponent<CharacterAnimation>();
             freezeState.ApplyModifiedPropertiesWithoutUndo();
 
             root.AddComponent<TagOnContact>();
@@ -695,6 +712,102 @@ namespace BarafPaani.EditorTools
         /// difference, but on a city it would have let runners see the catcher
         /// straight through buildings and left the minimap blip permanently lit.
         /// </summary>
+        /// <summary>
+        /// Puts the character model under a root and wires up everything that
+        /// makes it move and change colour.
+        ///
+        /// Shared by both prefabs on purpose: a player and an AI have to be the
+        /// same character. When the visuals lived on each prefab separately in
+        /// the old build they drifted, and an AI ended up a different height
+        /// than a human — which changes who can see whom over a wall.
+        /// </summary>
+        private static void AddBody(GameObject root)
+        {
+            GameObject modelAsset = AssetDatabase.LoadAssetAtPath<GameObject>(CharacterModelPath);
+
+            if (modelAsset == null)
+            {
+                Debug.LogError($"Baraf-Paani: no character model at {CharacterModelPath}.");
+                return;
+            }
+
+            GameObject model = (GameObject)PrefabUtility.InstantiatePrefab(modelAsset);
+            model.name = "Body";
+            model.transform.SetParent(root.transform, false);
+
+            // The model's origin is at its feet, same as the root's, so it
+            // stands on the ground rather than floating a capsule's height up.
+            model.transform.localPosition = Vector3.zero;
+
+            Animator animator = model.GetComponent<Animator>();
+
+            if (animator != null)
+            {
+                animator.runtimeAnimatorController =
+                    AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(
+                        CharacterAnimatorBuilder.ControllerPath);
+
+                // The motor and the NavMeshAgent are what move a character.
+                // Root motion would be a second thing moving it, and the two
+                // fight: the visible character drifts away from its collider,
+                // so freezes land on someone who is not standing there.
+                animator.applyRootMotion = false;
+
+                // Off-screen characters still need their transforms right —
+                // freeze is decided by where a character is, not by whether
+                // anyone is looking at it.
+                animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+            }
+            else
+            {
+                Debug.LogError("Baraf-Paani: the character model has no Animator.");
+            }
+
+            Renderer[] renderers = model.GetComponentsInChildren<Renderer>();
+
+            CharacterAppearance appearance = root.AddComponent<CharacterAppearance>();
+            SerializedObject look = new SerializedObject(appearance);
+            SerializedProperty list = look.FindProperty("_renderers");
+            list.arraySize = renderers.Length;
+
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                list.GetArrayElementAtIndex(i).objectReferenceValue = renderers[i];
+            }
+
+            look.ApplyModifiedPropertiesWithoutUndo();
+
+            CharacterAnimation animation = root.AddComponent<CharacterAnimation>();
+            SerializedObject motion = new SerializedObject(animation);
+            motion.FindProperty("_animator").objectReferenceValue = animator;
+            motion.ApplyModifiedPropertiesWithoutUndo();
+
+            ReportHeight(renderers);
+        }
+
+        /// <summary>
+        /// Logs how tall the model actually is, because the colliders, the eye
+        /// height and the camera target are all hand-set to a two metre
+        /// character. If an imported model does not match, everything sighted
+        /// through those numbers is quietly wrong.
+        /// </summary>
+        private static void ReportHeight(Renderer[] renderers)
+        {
+            if (renderers.Length == 0)
+            {
+                return;
+            }
+
+            Bounds bounds = renderers[0].bounds;
+
+            foreach (Renderer renderer in renderers)
+            {
+                bounds.Encapsulate(renderer.bounds);
+            }
+
+            Debug.Log($"Baraf-Paani: character model stands {bounds.size.y:0.00}m tall.");
+        }
+
         private static Vision AddVision(GameObject root, Transform eye)
         {
             Vision vision = root.AddComponent<Vision>();

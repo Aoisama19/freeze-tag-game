@@ -85,6 +85,33 @@ Assets/
   ThirdParty/        Mirror, Starter Assets, store packages
 ```
 
+## Characters
+
+One model for both sides — Mixamo's Y Bot, carried over from the old project
+along with the Unity humanoid walk, run and idle cycles. Catcher and runner are
+told apart by colour, not by shape, so neither side can read an advantage off a
+silhouette and both have the same eye height for line-of-sight.
+
+Two things are worth knowing about how it is driven:
+
+**Animation is not networked.** `CharacterAnimation` works the speed out from
+how far the transform moved since last frame, which is information every client
+already has. That one component covers the local player, a remote player being
+moved by NetworkTransform, and an AI being moved by its NavMeshAgent, and none
+of the three costs a byte on the wire. The catch is that a teleport is
+indistinguishable from a sprint, and rounds begin by teleporting everyone back
+to their spawn — so `MoveSpeed` throws away any step too big to have been
+walked.
+
+**Root motion is off.** The motor and the agent move a character. If the
+animation moved it too, the model would drift off its own collider and freezes
+would land on someone who is not standing where they appear to be. The blend
+tree's thresholds are still read from the clips' own travel speeds at build
+time, so the legs turn over at roughly the rate the ground goes past.
+
+Colour goes through a `MaterialPropertyBlock` rather than `renderer.material`,
+which clones the shared material once per character and leaks the clone.
+
 ## Deliberately not doing
 
 - **Client-side prediction or lag compensation.** This is a LAN/friends-scale
@@ -95,7 +122,8 @@ Assets/
   fragile dependencies in the old project and pulled from pinned Git URLs that
   required network access on first open. Avatars get baked to prefabs instead.
 
-Ready Player Me is now confirmed dropped, not just proposed.
+Ready Player Me is now confirmed dropped, not just proposed. The characters it
+used to load at runtime are a committed model instead.
 
 ## Scope of the first pass
 

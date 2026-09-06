@@ -17,15 +17,16 @@ namespace BarafPaani.Gameplay
     public class Freezable : NetworkBehaviour
     {
         [SerializeField]
-        [Tooltip("Renderer tinted while frozen. Placeholder until real avatars land.")]
-        private Renderer _bodyRenderer;
-
-        [SerializeField]
-        private Color _frozenColour = new Color(0.55f, 0.8f, 1f);
-
-        [SerializeField]
         [Tooltip("Disabled while frozen so the character cannot be driven.")]
         private PlayerMotor _motor;
+
+        [SerializeField]
+        [Tooltip("Tinted while frozen.")]
+        private CharacterAppearance _appearance;
+
+        [SerializeField]
+        [Tooltip("Stopped mid-stride while frozen.")]
+        private CharacterAnimation _animation;
 
         [SyncVar(hook = nameof(OnIsFrozenChanged))]
         private bool _isFrozen;
@@ -34,8 +35,6 @@ namespace BarafPaani.Gameplay
         // twice without doing the work twice, and so the initial state is
         // applied exactly once on spawn.
         private bool? _applied;
-
-        private Color _thawedColour;
 
         public bool IsFrozen => _isFrozen;
 
@@ -46,9 +45,14 @@ namespace BarafPaani.Gameplay
                 _motor = GetComponent<PlayerMotor>();
             }
 
-            if (_bodyRenderer != null)
+            if (_appearance == null)
             {
-                _thawedColour = _bodyRenderer.material.color;
+                _appearance = GetComponent<CharacterAppearance>();
+            }
+
+            if (_animation == null)
+            {
+                _animation = GetComponent<CharacterAnimation>();
             }
         }
 
@@ -120,9 +124,14 @@ namespace BarafPaani.Gameplay
                 _motor.enabled = !frozen;
             }
 
-            if (_bodyRenderer != null)
+            if (_appearance != null)
             {
-                _bodyRenderer.material.color = frozen ? _frozenColour : _thawedColour;
+                _appearance.SetFrozen(frozen);
+            }
+
+            if (_animation != null)
+            {
+                _animation.SetFrozen(frozen);
             }
         }
     }
