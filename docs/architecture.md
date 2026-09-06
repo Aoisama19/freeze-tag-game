@@ -228,11 +228,24 @@ joiner simply stayed in whatever map its own menu had chosen, so hosting
 Badshahi Masjid while the other player had 3 Talwaar selected put the two of
 them in different cities running the same match.
 
-The joiner still loads its own choice briefly before being moved. That is
-inherent to the NetworkManager living inside each game scene: a client has to
-load some game scene before it can connect at all. Removing the flash means
-moving the NetworkManager into the menu scene, which is a restructure rather
-than a fix.
+**A joiner loads no map of its own.** It waits in `Connecting`, a nearly empty
+scene whose only real content is a NetworkManager. A client needs one of those
+to connect through, and every other one lives inside a map — which is why
+joining used to mean loading whichever map the joiner had selected, connecting,
+and only then being moved to the host's. Two loads, the first of them wrong.
+
+A separate scene rather than putting the manager in the menu, which is Mirror's
+textbook layout. Mirror destroys a duplicate NetworkManager's entire GameObject,
+and `GameLauncher` sits on that object in every map scene, so a persistent menu
+manager would kill the launcher that starts the host. This way the host path,
+opening a map scene on its own, and every existing test are all untouched.
+
+The connecting scene registers the same spawnable prefabs as a map scene,
+because a client is connected and being told about spawned objects before the
+host's map has finished loading.
+
+It also gives a failed join somewhere to be reported. Before it, a client that
+could not reach the host sat in a map with no players and no explanation.
 
 The fourth landmark, Faisal Mosque, is not here. It is a bare FBX with no
 prefab, no materials and no textures, and nothing in either old repository

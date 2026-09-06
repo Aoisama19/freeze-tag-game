@@ -181,6 +181,13 @@ namespace BarafPaani.EditorTools
                 new EditorBuildSettingsScene(ScenePath, true)
             };
 
+            // A joiner passes through this on the way in, so it has to be in the
+            // build or JOIN would fail in a player and work in the editor.
+            if (File.Exists(ConnectingSceneBuilder.ScenePath))
+            {
+                scenes.Add(new EditorBuildSettingsScene(ConnectingSceneBuilder.ScenePath, true));
+            }
+
             // Every map, found on disk rather than listed here. A map added to
             // the builder's table and forgotten in a second list is a map the
             // menu offers and the build cannot load.

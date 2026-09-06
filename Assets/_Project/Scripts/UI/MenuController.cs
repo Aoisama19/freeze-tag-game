@@ -68,6 +68,10 @@ namespace BarafPaani.UI
         [SerializeField]
         private string _gameScene = "Game_3Talwaar";
 
+        [SerializeField]
+        [Tooltip("Where a joining player waits. Never a map — the host decides that.")]
+        private string _connectingScene = "Connecting";
+
         [Header("Look")]
         [SerializeField]
         private Color _chosen = new Color(1f, 0.85f, 0.3f);
@@ -294,7 +298,14 @@ namespace BarafPaani.UI
                 fill,
                 BotCount(),
                 _addressField != null ? _addressField.text : null);
-            SceneManager.LoadScene(_gameScene, LoadSceneMode.Single);
+
+            // A joiner loads no map of its own. It waits in the connecting
+            // scene, and the server sends its own map as the client
+            // authenticates. Loading the map picked here first would be a load
+            // of the wrong city.
+            SceneManager.LoadScene(
+                mode == GameMode.MultiplayerJoin ? _connectingScene : _gameScene,
+                LoadSceneMode.Single);
         }
 
         private static void Quit()
