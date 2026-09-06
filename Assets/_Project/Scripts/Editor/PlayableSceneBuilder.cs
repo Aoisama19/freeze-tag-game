@@ -509,6 +509,7 @@ namespace BarafPaani.EditorTools
             surface.size = new Vector3(map.ArenaSize, map.NavMeshVolumeHeight, map.ArenaSize);
 
             BuildCamera();
+            EnsureLight();
             BuildNetworkManager(playerPrefab, aiPrefab, decoyPrefab);
             BuildMatch();
             BuildHud(sounds, minimap, map);
@@ -1340,15 +1341,19 @@ namespace BarafPaani.EditorTools
             }
         }
 
+        /// <summary>
+        /// The camera the player looks through, and the rig that follows them.
+        ///
+        /// Creates the camera rather than assuming one is there. A scene built
+        /// for a map nobody had added yet starts from an empty scene, which has
+        /// no camera, no audio listener and no light — so the first two maps
+        /// added this way came out with nothing rendering at all. Depending on
+        /// whatever the scene template happened to provide is the bug; building
+        /// every scene the same way regardless is the fix.
+        /// </summary>
         private static void BuildCamera()
         {
-            Camera main = Camera.main;
-
-            if (main == null)
-            {
-                Debug.LogError("No camera tagged MainCamera in the scene.");
-                return;
-            }
+            Camera main = Camera.main ?? CreateMainCamera();
 
             if (main.GetComponent<CinemachineBrain>() == null)
             {
@@ -1365,6 +1370,48 @@ namespace BarafPaani.EditorTools
 
             // Drives the orbit from mouse and stick look input.
             rig.AddComponent<CinemachineInputAxisController>();
+        }
+
+        private static Camera CreateMainCamera()
+        {
+            GameObject cameraObject = new GameObject("Main Camera");
+
+            // Camera.main finds by tag, so without this the next call would
+            // create a second one.
+            cameraObject.tag = "MainCamera";
+
+            Camera camera = cameraObject.AddComponent<Camera>();
+
+            // The listener lives here, as it does on Unity's own camera. Its
+            // absence is the whole game being silent, and the only warning is
+            // one line in the console.
+            cameraObject.AddComponent<AudioListener>();
+
+            return camera;
+        }
+
+        /// <summary>
+        /// A sun. An empty scene has none, and an unlit city reads as a broken
+        /// map rather than a dark one.
+        /// </summary>
+        private static void EnsureLight()
+        {
+            foreach (Light existing in Object.FindObjectsByType<Light>(FindObjectsSortMode.None))
+            {
+                if (existing.type == LightType.Directional)
+                {
+                    return;
+                }
+            }
+
+            GameObject sun = new GameObject("Directional Light");
+            sun.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
+
+            Light light = sun.AddComponent<Light>();
+            light.type = LightType.Directional;
+            light.color = new Color(1f, 0.96f, 0.84f);
+            light.intensity = 1.1f;
+            light.shadows = LightShadows.Soft;
         }
 
         private static void BuildNetworkManager(

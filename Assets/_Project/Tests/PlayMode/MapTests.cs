@@ -83,6 +83,31 @@ namespace BarafPaani.Tests
                 Assert.IsNotNull(
                     Object.FindFirstObjectByType<Canvas>(), $"{map} has no HUD");
 
+                // The one that actually shipped broken. Scenes for maps added
+                // after the first are created from an empty scene, which has no
+                // camera, no listener and no light, and the builder used to
+                // assume all three were already there. The result was a map that
+                // loaded, ran a match, and rendered nothing at all.
+                Camera view = Camera.main;
+                Assert.IsNotNull(view, $"{map} has no camera tagged MainCamera");
+
+                Assert.IsTrue(
+                    view.isActiveAndEnabled, $"{map} has a main camera that is not rendering");
+
+                Assert.IsNotNull(
+                    Object.FindFirstObjectByType<AudioListener>(),
+                    $"{map} has nothing listening, so the whole map is silent");
+
+                bool sun = false;
+
+                foreach (Light light in
+                         Object.FindObjectsByType<Light>(FindObjectsSortMode.None))
+                {
+                    sun |= light.type == LightType.Directional;
+                }
+
+                Assert.IsTrue(sun, $"{map} has no directional light, so it renders unlit");
+
                 // The one that would leave the AI standing still: a surface with
                 // no baked data attached to it.
                 NavMeshSurface surface = Object.FindFirstObjectByType<NavMeshSurface>();

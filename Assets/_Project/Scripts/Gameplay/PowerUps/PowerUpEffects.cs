@@ -126,7 +126,7 @@ namespace BarafPaani.Gameplay.PowerUps
         [Server]
         public bool Begin(PowerUpKind kind)
         {
-            bool started = Start(kind);
+            bool started = StartEffect(kind);
 
             if (started)
             {
@@ -148,8 +148,14 @@ namespace BarafPaani.Gameplay.PowerUps
             }
         }
 
+        /// <summary>
+        /// Not called Start. Unity reserves that name for a lifecycle message
+        /// and its dispatcher rejects any Start that takes parameters, which
+        /// logged a script error on every build while the method itself worked
+        /// perfectly well when called from here.
+        /// </summary>
         [Server]
-        private bool Start(PowerUpKind kind)
+        private bool StartEffect(PowerUpKind kind)
         {
             switch (kind)
             {
