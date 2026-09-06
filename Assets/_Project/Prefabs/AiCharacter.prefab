@@ -49,8 +49,11 @@ GameObject:
   - component: {fileID: 2419465016372248646}
   - component: {fileID: 6454497505027680911}
   - component: {fileID: 3614840783962587385}
+  - component: {fileID: 6073814746214785550}
+  - component: {fileID: 1248046992684777144}
   - component: {fileID: 2389651082418437575}
   - component: {fileID: 4724937323818479925}
+  - component: {fileID: 2089726807341898697}
   m_Layer: 0
   m_Name: AiCharacter
   m_TagString: Untagged
@@ -267,6 +270,41 @@ MonoBehaviour:
   _characterMask:
     serializedVersion: 2
     m_Bits: 4294967295
+--- !u!114 &6073814746214785550
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3616083226831351402}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7cbf6746d51bcf64e9c90d907a03735f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: BarafPaani::BarafPaani.Gameplay.PowerUps.PowerUpEffects
+  syncMethod: 0
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  _speedBoostSeconds: 6
+  _speedBoostMultiplier: 1.7
+--- !u!114 &1248046992684777144
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3616083226831351402}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1d2be2865c670734397aa07c9364ebcf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: BarafPaani::BarafPaani.Gameplay.PowerUps.PowerUpHolder
+  syncMethod: 0
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  _maxCarried: 3
 --- !u!114 &2389651082418437575
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -316,6 +354,23 @@ MonoBehaviour:
   _guardSeconds: 6
   _guardBreakSeconds: 6
   _guardStandoff: 4
+--- !u!114 &2089726807341898697
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3616083226831351402}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 64f6cb4cef46d324dbe12bbc793646ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: BarafPaani::BarafPaani.AI.AiPowerUpUse
+  syncMethod: 0
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  _thinkInterval: 1
 --- !u!1001 &5389109517119288106
 PrefabInstance:
   m_ObjectHideFlags: 0

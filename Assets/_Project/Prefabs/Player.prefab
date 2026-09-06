@@ -18,6 +18,9 @@ GameObject:
   - component: {fileID: 3902200697908445633}
   - component: {fileID: 5666149522264908578}
   - component: {fileID: 4883588249623572307}
+  - component: {fileID: 1482933374131411619}
+  - component: {fileID: 8093290643971050516}
+  - component: {fileID: 6827506561504759282}
   - component: {fileID: 6793200223373088515}
   - component: {fileID: 5999806043977345591}
   - component: {fileID: 41977536852894525}
@@ -239,6 +242,57 @@ MonoBehaviour:
   _characterMask:
     serializedVersion: 2
     m_Bits: 4294967295
+--- !u!114 &1482933374131411619
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6002608933944491225}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7cbf6746d51bcf64e9c90d907a03735f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: BarafPaani::BarafPaani.Gameplay.PowerUps.PowerUpEffects
+  syncMethod: 0
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  _speedBoostSeconds: 6
+  _speedBoostMultiplier: 1.7
+--- !u!114 &8093290643971050516
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6002608933944491225}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1d2be2865c670734397aa07c9364ebcf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: BarafPaani::BarafPaani.Gameplay.PowerUps.PowerUpHolder
+  syncMethod: 0
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  _maxCarried: 3
+--- !u!114 &6827506561504759282
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6002608933944491225}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 53236572a0801a3499fe9118f306e83d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: BarafPaani::BarafPaani.Gameplay.PowerUps.PowerUpInput
+  syncMethod: 0
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
 --- !u!114 &6793200223373088515
 MonoBehaviour:
   m_ObjectHideFlags: 0

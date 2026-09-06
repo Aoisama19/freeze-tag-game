@@ -107,6 +107,16 @@ namespace BarafPaani.Gameplay
             }
         }
 
+        /// <summary>
+        /// Starts a fresh round immediately, without waiting out the delay that
+        /// follows a result. The same reset the end of a round performs.
+        /// </summary>
+        [Server]
+        public void RestartNow()
+        {
+            BeginRound();
+        }
+
         [Server]
         private void BeginRound()
         {
@@ -114,6 +124,7 @@ namespace BarafPaani.Gameplay
             _outcome = MatchOutcome.InProgress;
 
             ThawEveryone();
+            ClearPowerUps();
             ReturnEveryoneToSpawn();
             CountRunners();
         }
@@ -143,6 +154,33 @@ namespace BarafPaani.Gameplay
 
             _runnersTotal = total;
             _runnersFree = free;
+        }
+
+        /// <summary>
+        /// Nobody starts a round mid-sprint or holding what they saved from the
+        /// last one. An effect left running across a restart is the sort of
+        /// thing that looks like a physics bug rather than a stale flag.
+        /// </summary>
+        [Server]
+        private void ClearPowerUps()
+        {
+            foreach (NetworkIdentity identity in NetworkServer.spawned.Values)
+            {
+                if (identity == null)
+                {
+                    continue;
+                }
+
+                if (identity.TryGetComponent(out PowerUps.PowerUpEffects effects))
+                {
+                    effects.ClearAll();
+                }
+
+                if (identity.TryGetComponent(out PowerUps.PowerUpHolder holder))
+                {
+                    holder.Clear();
+                }
+            }
         }
 
         [Server]

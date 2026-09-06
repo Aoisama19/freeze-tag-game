@@ -30,6 +30,14 @@ namespace BarafPaani.Gameplay
 
         private CharacterController _controller;
         private GameInput _input;
+
+        /// <summary>
+        /// Scales both speeds. Owned by PowerUpEffects, which is the only thing
+        /// that sets it — the walk and sprint numbers themselves stay the
+        /// character's own, so an effect ending restores them exactly.
+        /// </summary>
+        public float SpeedMultiplier { get; set; } = 1f;
+
         private Transform _camera;
         private float _turnVelocity;
         private float _verticalVelocity;
@@ -95,7 +103,7 @@ namespace BarafPaani.Gameplay
                     transform.eulerAngles.y, targetAngle, ref _turnVelocity, _turnSmoothTime);
                 transform.rotation = Quaternion.Euler(0f, angle, 0f);
 
-                float speed = sprinting ? _sprintSpeed : _walkSpeed;
+                float speed = (sprinting ? _sprintSpeed : _walkSpeed) * SpeedMultiplier;
                 motion = Quaternion.Euler(0f, targetAngle, 0f) * Vector3.forward * speed;
             }
 

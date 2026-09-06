@@ -1,6 +1,7 @@
 using BarafPaani.AI;
 using BarafPaani.Core;
 using BarafPaani.Gameplay;
+using BarafPaani.Gameplay.PowerUps;
 using BarafPaani.UI;
 using kcp2k;
 using Mirror;
@@ -122,6 +123,26 @@ namespace BarafPaani.EditorTools
         /// </summary>
         private static readonly Vector3 ArenaCentre = new Vector3(11f, 0f, -9f);
 
+        /// <summary>
+        /// Power-up pickups, and where they sit. Deliberately a shorter ring
+        /// than the spawn points: they are worth walking towards, and a runner
+        /// heading inward for one is a runner heading towards the catcher.
+        /// </summary>
+        private static readonly PowerUpKind[] PickupRing =
+        {
+            PowerUpKind.SpeedBoost,
+            PowerUpKind.SpeedBoost,
+            PowerUpKind.SpeedBoost,
+            PowerUpKind.SpeedBoost,
+            PowerUpKind.SpeedBoost,
+            PowerUpKind.SpeedBoost,
+        };
+
+        private const float PickupRingRadius = 24f;
+
+        /// <summary>Waist height, so they are visible over a kerb but still walked into.</summary>
+        private const float PickupHeight = 1f;
+
         [MenuItem("Baraf-Paani/Rebuild Playable Scene")]
         public static void Rebuild()
         {
@@ -186,6 +207,10 @@ namespace BarafPaani.EditorTools
             freezeState.ApplyModifiedPropertiesWithoutUndo();
 
             root.AddComponent<TagOnContact>();
+
+            root.AddComponent<PowerUpEffects>();
+            root.AddComponent<PowerUpHolder>();
+            root.AddComponent<PowerUpInput>();
 
             // Sight on a player is used server-side only, to decide whether this
             // runner has earned a catcher blip on their minimap.
@@ -276,12 +301,18 @@ namespace BarafPaani.EditorTools
 
             root.AddComponent<TagOnContact>();
 
+            root.AddComponent<PowerUpEffects>();
+            root.AddComponent<PowerUpHolder>();
+
             Vision vision = AddVision(root, eye.transform);
 
             AiBrain brain = root.AddComponent<AiBrain>();
             SerializedObject brainState = new SerializedObject(brain);
             brainState.FindProperty("_vision").objectReferenceValue = vision;
             brainState.ApplyModifiedPropertiesWithoutUndo();
+
+            // After the brain, which it requires and reads the intent from.
+            root.AddComponent<AiPowerUpUse>();
 
             GameObject saved = PrefabUtility.SaveAsPrefabAsset(root, AiPrefabPath);
             Object.DestroyImmediate(root);
@@ -317,6 +348,7 @@ namespace BarafPaani.EditorTools
             BuildMatch();
             BuildHud();
             BuildSpawnPoints(surface);
+            BuildPowerUpPickups();
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
@@ -405,6 +437,72 @@ namespace BarafPaani.EditorTools
         /// it lands on ground a character can actually stand on. A ring position
         /// picked blind could easily sit inside a building or off a kerb.
         /// </summary>
+        /// <summary>
+        /// Scatters the pickups around the middle of the arena.
+        ///
+        /// Placed on the baked NavMesh rather than at their ideal angle, for the
+        /// same reason spawn points are: an ideal position is frequently inside
+        /// a building. The roof check is here too — a power-up fourteen metres
+        /// up is not a power-up, it is a thing nobody can ever reach.
+        /// </summary>
+        private static void BuildPowerUpPickups()
+        {
+            int placed = 0;
+
+            for (int i = 0; i < PickupRing.Length; i++)
+            {
+                // Offset half a step off the spawn ring's angles, so a pickup is
+                // never sitting directly on top of a spawn point.
+                float angle = (i + 0.5f) * Mathf.PI * 2f / PickupRing.Length;
+
+                Vector3 ideal = ArenaCentre + new Vector3(
+                    Mathf.Sin(angle) * PickupRingRadius, 0f, Mathf.Cos(angle) * PickupRingRadius);
+
+                if (!NavMesh.SamplePosition(
+                        ideal, out NavMeshHit hit, PickupRingRadius, NavMesh.AllAreas))
+                {
+                    Debug.LogWarning($"PowerUp {i + 1}: no navigable ground near {ideal}.");
+                    continue;
+                }
+
+                if (hit.position.y > MaxSpawnHeight)
+                {
+                    Debug.LogWarning(
+                        $"PowerUp {i + 1}: nearest ground was {hit.position.y:F1}m up, so it was skipped.");
+                    continue;
+                }
+
+                GameObject pickup = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                pickup.name = $"PowerUp {i + 1} {PickupRing[i]}";
+                pickup.transform.position = hit.position + new Vector3(0f, PickupHeight, 0f);
+                pickup.transform.localScale = new Vector3(0.6f, 0.6f, 0.6f);
+                pickup.transform.rotation = Quaternion.Euler(35f, 0f, 35f);
+
+                // A trigger, so it is walked through rather than bumped into.
+                // How close counts as picking it up is PowerUpPickup's own
+                // range, not this collider — nothing reads its trigger events.
+                pickup.GetComponent<BoxCollider>().isTrigger = true;
+
+                // A scene identity, so Mirror owns it from the start of the
+                // match. The old build's pickups were plain objects that each
+                // client handled for itself, which is how two people could take
+                // the same one.
+                pickup.AddComponent<NetworkIdentity>();
+
+                PowerUpPickup component = pickup.AddComponent<PowerUpPickup>();
+                SerializedObject state = new SerializedObject(component);
+                // intValue, not enumValueIndex: the latter is a position in the
+                // name list, which only matches the value while the enum happens
+                // to be numbered from zero with no gaps.
+                state.FindProperty("_kind").intValue = (int)PickupRing[i];
+                state.ApplyModifiedPropertiesWithoutUndo();
+
+                placed++;
+            }
+
+            Debug.Log($"Power-up pickups placed on the NavMesh: {placed} of {PickupRing.Length}.");
+        }
+
         private static void BuildSpawnPoints(NavMeshSurface surface)
         {
             // Bake here, at edit time, and keep the result as its own asset.
@@ -612,6 +710,21 @@ namespace BarafPaani.EditorTools
             Text result = MakeLabel(hud, "ResultLabel", font, 40, TextAnchor.MiddleCenter);
             Place(result.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 120f), new Vector2(900f, 60f));
             result.enabled = false;
+
+            Text carried = MakeLabel(hud, "PowerUpsLabel", font, 22, TextAnchor.LowerLeft);
+            Place(carried.rectTransform, new Vector2(0f, 0f), new Vector2(24f, 24f), new Vector2(520f, 32f));
+            carried.supportRichText = true;
+
+            Text active = MakeLabel(hud, "PowerUpActiveLabel", font, 20, TextAnchor.LowerLeft);
+            Place(active.rectTransform, new Vector2(0f, 0f), new Vector2(24f, 60f), new Vector2(320f, 28f));
+            active.enabled = false;
+
+            PowerUpHud powerUps = hud.AddComponent<PowerUpHud>();
+
+            SerializedObject powerUpState = new SerializedObject(powerUps);
+            powerUpState.FindProperty("_carriedLabel").objectReferenceValue = carried;
+            powerUpState.FindProperty("_activeLabel").objectReferenceValue = active;
+            powerUpState.ApplyModifiedPropertiesWithoutUndo();
 
             MatchHud matchHud = hud.AddComponent<MatchHud>();
 
@@ -909,7 +1022,12 @@ namespace BarafPaani.EditorTools
             foreach (GameObject root in scene.GetRootGameObjects())
             {
                 bool isGenerated = System.Array.IndexOf(generated, root.name) >= 0
-                    || root.name.StartsWith("SpawnPoint");
+                    || root.name.StartsWith("SpawnPoint")
+
+                    // By component rather than by name. Anything this list
+                    // forgets is left behind and quietly doubled on the next
+                    // rebuild, which is exactly what happened to the pickups.
+                    || root.GetComponent<PowerUpPickup>() != null;
 
                 if (isGenerated)
                 {
