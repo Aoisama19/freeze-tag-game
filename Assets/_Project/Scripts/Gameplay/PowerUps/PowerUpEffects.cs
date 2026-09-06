@@ -43,6 +43,15 @@ namespace BarafPaani.Gameplay.PowerUps
         [SyncVar]
         private double _invisibleEndsAt;
 
+        [Header("Clone")]
+        [SerializeField]
+        [Tooltip("Spawned when the clone is used. Registered with the NetworkManager so clients can see it.")]
+        private GameObject _decoyPrefab;
+
+        [SerializeField]
+        [Tooltip("How far behind the caster it is left standing.")]
+        private float _decoyStandBack = 1.5f;
+
         private PlayerMotor _motor;
         private NavMeshAgent _agent;
         private CharacterAppearance _appearance;
@@ -123,6 +132,9 @@ namespace BarafPaani.Gameplay.PowerUps
                 case PowerUpKind.Invisibility:
                     return BeginInvisibility();
 
+                case PowerUpKind.Clone:
+                    return BeginClone();
+
                 default:
                     return false;
             }
@@ -147,6 +159,32 @@ namespace BarafPaani.Gameplay.PowerUps
             _invisibleEndsAt = NetworkTime.time + _invisibleSeconds;
             _invisible = true;
             ApplyInvisible(true);
+
+            return true;
+        }
+
+        [Server]
+        private bool BeginClone()
+        {
+            if (_decoyPrefab == null)
+            {
+                Debug.LogWarning("No decoy prefab is set, so the clone has nothing to spawn.", this);
+                return false;
+            }
+
+            // Left standing where the caster was, so running on puts distance
+            // between the two and the chaser has to pick.
+            Vector3 where = transform.position - (transform.forward * _decoyStandBack);
+
+            GameObject decoy = Instantiate(_decoyPrefab, where, transform.rotation);
+
+            // Role before Spawn, not after. In host mode Mirror deserializes the
+            // spawn payload back onto the same object, so anything written after
+            // spawning is overwritten by what the payload said — the bug that
+            // stopped roles sticking at all when this project started.
+            decoy.GetComponent<Decoy>().Live(GetComponent<PlayerRole>().Role);
+
+            NetworkServer.Spawn(decoy);
 
             return true;
         }

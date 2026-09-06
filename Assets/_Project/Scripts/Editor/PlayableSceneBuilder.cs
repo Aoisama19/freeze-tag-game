@@ -27,6 +27,8 @@ namespace BarafPaani.EditorTools
     {
         private const string PrefabPath = "Assets/_Project/Prefabs/Player.prefab";
         private const string AiPrefabPath = "Assets/_Project/Prefabs/AiCharacter.prefab";
+
+        private const string DecoyPrefabPath = "Assets/_Project/Prefabs/Decoy.prefab";
         private const string ScenePath = "Assets/_Project/Scenes/Game.unity";
 
         /// <summary>
@@ -132,10 +134,10 @@ namespace BarafPaani.EditorTools
         {
             PowerUpKind.SpeedBoost,
             PowerUpKind.Invisibility,
+            PowerUpKind.Clone,
             PowerUpKind.SpeedBoost,
             PowerUpKind.Invisibility,
-            PowerUpKind.SpeedBoost,
-            PowerUpKind.Invisibility,
+            PowerUpKind.Clone,
         };
 
         private const float PickupRingRadius = 24f;
@@ -150,15 +152,18 @@ namespace BarafPaani.EditorTools
             // exist before they are saved or they save a null reference.
             CharacterAnimatorBuilder.Rebuild();
 
-            GameObject playerPrefab = BuildPlayerPrefab();
-            GameObject aiPrefab = BuildAiPrefab();
-            BuildScene(playerPrefab, aiPrefab);
+            // Before the characters: both of them carry a reference to it.
+            GameObject decoyPrefab = BuildDecoyPrefab();
+
+            GameObject playerPrefab = BuildPlayerPrefab(decoyPrefab);
+            GameObject aiPrefab = BuildAiPrefab(decoyPrefab);
+            BuildScene(playerPrefab, aiPrefab, decoyPrefab);
 
             AssetDatabase.SaveAssets();
             Debug.Log("Baraf-Paani: rebuilt the player prefab and the playable scene.");
         }
 
-        private static GameObject BuildPlayerPrefab()
+        private static GameObject BuildPlayerPrefab(GameObject decoyPrefab)
         {
             GameObject root = new GameObject("Player");
 
@@ -208,7 +213,7 @@ namespace BarafPaani.EditorTools
 
             root.AddComponent<TagOnContact>();
 
-            root.AddComponent<PowerUpEffects>();
+            AddPowerUpEffects(root, decoyPrefab);
             root.AddComponent<PowerUpHolder>();
             root.AddComponent<PowerUpInput>();
 
@@ -249,7 +254,7 @@ namespace BarafPaani.EditorTools
         /// and TagOnContact are shared, so an AI freezes and is freed by exactly
         /// the code that handles humans.
         /// </summary>
-        private static GameObject BuildAiPrefab()
+        private static GameObject BuildAiPrefab(GameObject decoyPrefab)
         {
             GameObject root = new GameObject("AiCharacter");
 
@@ -301,7 +306,7 @@ namespace BarafPaani.EditorTools
 
             root.AddComponent<TagOnContact>();
 
-            root.AddComponent<PowerUpEffects>();
+            AddPowerUpEffects(root, decoyPrefab);
             root.AddComponent<PowerUpHolder>();
 
             Vision vision = AddVision(root, eye.transform);
@@ -320,7 +325,60 @@ namespace BarafPaani.EditorTools
             return saved;
         }
 
-        private static void BuildScene(GameObject playerPrefab, GameObject aiPrefab)
+        /// <summary>
+        /// The clone: a standing copy of whoever made it.
+        ///
+        /// Built from the same body as a real character, because the whole
+        /// point is that it cannot be told apart at a glance. It carries the
+        /// pieces that make it worth chasing — a role, a collider, and a
+        /// Freezable so tagging it appears to work — and none of the pieces
+        /// that would make it a player. No TagOnContact especially: a decoy
+        /// that froze people by standing near them would be a weapon.
+        /// </summary>
+        private static GameObject BuildDecoyPrefab()
+        {
+            GameObject root = new GameObject("Decoy");
+
+            CapsuleCollider capsule = root.AddComponent<CapsuleCollider>();
+            capsule.height = 2f;
+            capsule.radius = 0.35f;
+            capsule.center = new Vector3(0f, 1f, 0f);
+
+            root.AddComponent<NetworkIdentity>();
+
+            AddBody(root);
+
+            root.AddComponent<PlayerRole>();
+
+            Freezable freezable = root.AddComponent<Freezable>();
+            SerializedObject freezeState = new SerializedObject(freezable);
+            freezeState.FindProperty("_appearance").objectReferenceValue =
+                root.GetComponent<CharacterAppearance>();
+            freezeState.FindProperty("_animation").objectReferenceValue =
+                root.GetComponent<CharacterAnimation>();
+            freezeState.ApplyModifiedPropertiesWithoutUndo();
+
+            // No NetworkTransform: it never moves, and Mirror already sends the
+            // position it was spawned at.
+            root.AddComponent<Decoy>();
+
+            GameObject saved = PrefabUtility.SaveAsPrefabAsset(root, DecoyPrefabPath);
+            Object.DestroyImmediate(root);
+
+            return saved;
+        }
+
+        private static void AddPowerUpEffects(GameObject root, GameObject decoyPrefab)
+        {
+            PowerUpEffects effects = root.AddComponent<PowerUpEffects>();
+
+            SerializedObject state = new SerializedObject(effects);
+            state.FindProperty("_decoyPrefab").objectReferenceValue = decoyPrefab;
+            state.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void BuildScene(
+            GameObject playerPrefab, GameObject aiPrefab, GameObject decoyPrefab)
         {
             Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
 
@@ -344,7 +402,7 @@ namespace BarafPaani.EditorTools
             surface.size = new Vector3(ArenaSize, NavMeshVolumeHeight, ArenaSize);
 
             BuildCamera();
-            BuildNetworkManager(playerPrefab, aiPrefab);
+            BuildNetworkManager(playerPrefab, aiPrefab, decoyPrefab);
             BuildMatch();
             BuildHud();
             BuildSpawnPoints(surface);
@@ -1063,7 +1121,8 @@ namespace BarafPaani.EditorTools
             rig.AddComponent<CinemachineInputAxisController>();
         }
 
-        private static void BuildNetworkManager(GameObject playerPrefab, GameObject aiPrefab)
+        private static void BuildNetworkManager(
+            GameObject playerPrefab, GameObject aiPrefab, GameObject decoyPrefab)
         {
             GameObject host = new GameObject("NetworkManager");
 
@@ -1079,6 +1138,7 @@ namespace BarafPaani.EditorTools
             // server tells them about.
             manager.spawnPrefabs.Clear();
             manager.spawnPrefabs.Add(aiPrefab);
+            manager.spawnPrefabs.Add(decoyPrefab);
 
             SerializedObject managerState = new SerializedObject(manager);
             managerState.FindProperty("_aiCharacterPrefab").objectReferenceValue = aiPrefab;

@@ -117,6 +117,35 @@ starts to look like a cartoon.
 Colour goes through a `MaterialPropertyBlock` rather than `renderer.material`,
 which clones the shared material once per character and leaks the clone.
 
+## Power-ups
+
+Three: a speed boost, invisibility, and a clone. Six pickups sit closer to the
+middle of the arena than the spawn ring, so going for one means going towards
+trouble. Carry up to three, cycle with 1 and 2, use with left mouse. Bots use
+theirs, but only mid-chase or mid-flight.
+
+Server-authoritative throughout. The old build added a component to the
+character for each power-up picked up and destroyed it on use, which is why none
+of it survived contact with the network — a component added on one machine
+exists nowhere else. Here the inventory is replicated state and using one is a
+request the server grants or refuses.
+
+`PowerUpEffects` is the one place an effect has consequences, the same shape as
+`Freezable`. In the old build each power-up reached out and changed whatever it
+fancied — a sprint speed, a layer, a tag, a static event — and undid it in its
+own `Deactivate`, so anything interrupted halfway left the character
+permanently altered.
+
+Invisibility goes through `MapKnowledge` along with the rest of the knowledge
+rules, so it hides you from sight, from the minimap **and** from the catcher's
+otherwise unlimited view of the runners. A power-up that only removed a blip
+while the bot walked straight at you would read as the game cheating.
+
+One thing worth not rediscovering: pickups find takers with a proximity query
+rather than a trigger, because nothing in this game carries a Rigidbody.
+Written as `OnTriggerEnter` it worked for the human — a `CharacterController`
+raises trigger events — and silently never fired for a single bot.
+
 ## Deliberately not doing
 
 - **Client-side prediction or lag compensation.** This is a LAN/friends-scale

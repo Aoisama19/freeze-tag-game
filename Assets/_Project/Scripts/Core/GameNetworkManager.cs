@@ -229,6 +229,13 @@ namespace BarafPaani.Core
                     continue;
                 }
 
+                // Decoys wear a role to fool the catcher. Counting one would
+                // have the game send a real bot home to make room for it.
+                if (Gameplay.PowerUps.Decoy.Is(identity))
+                {
+                    continue;
+                }
+
                 if (role.Role == Role.Catcher)
                 {
                     catchers++;

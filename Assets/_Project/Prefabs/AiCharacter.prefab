@@ -289,6 +289,8 @@ MonoBehaviour:
   _speedBoostSeconds: 6
   _speedBoostMultiplier: 1.7
   _invisibleSeconds: 5
+  _decoyPrefab: {fileID: 437324504516816802, guid: b0cf28b7085e1fb4c9a3fa251f7637b3, type: 3}
+  _decoyStandBack: 1.5
 --- !u!114 &1248046992684777144
 MonoBehaviour:
   m_ObjectHideFlags: 0

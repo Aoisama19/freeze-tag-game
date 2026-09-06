@@ -69,6 +69,17 @@ carries the tag.
 **Rebuild:** clones are spawned by, and owned by, the character that used the
 power-up. Over the network they are server-spawned objects, not scene lookups.
 
+**Done.** `Decoy` is spawned by the character that used it and destroyed by the
+server that made it. There is no pool and nothing shared, so two people cloning
+at once get one each — which is a test. It carries a role and a `Freezable` so
+the catcher's targeting sees a runner and tagging it appears to work, and it
+deliberately has no `TagOnContact`, because a decoy that could freeze people by
+standing near them would be a weapon rather than a trick.
+
+Two headcounts had to learn to ignore it: the round's runner tally, where a
+decoy counted as a runner makes a round nobody can win, and the bot filling,
+which would otherwise send a real bot home to make room for one.
+
 ---
 
 ## 4. Two competing multiplayer implementations

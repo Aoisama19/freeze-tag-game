@@ -125,6 +125,7 @@ namespace BarafPaani.Gameplay
 
             ThawEveryone();
             ClearPowerUps();
+            RemoveDecoys();
             ReturnEveryoneToSpawn();
             CountRunners();
         }
@@ -139,7 +140,12 @@ namespace BarafPaani.Gameplay
                 if (identity == null
                     || !identity.TryGetComponent(out PlayerRole role)
                     || role.Role != Role.Runner
-                    || !identity.TryGetComponent(out Freezable freezable))
+                    || !identity.TryGetComponent(out Freezable freezable)
+
+                    // A decoy is meant to look like a runner to the catcher, so
+                    // it looks like one here too. Counted, it would add a runner
+                    // who can never be caught for good and a round nobody wins.
+                    || PowerUps.Decoy.Is(identity))
                 {
                     continue;
                 }
@@ -179,6 +185,34 @@ namespace BarafPaani.Gameplay
                 if (identity.TryGetComponent(out PowerUps.PowerUpHolder holder))
                 {
                     holder.Clear();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Clears away anyone's clones. A decoy outliving the round it was made
+        /// in would stand in the street for the rest of the match.
+        /// </summary>
+        [Server]
+        private void RemoveDecoys()
+        {
+            // Collected first: destroying while walking NetworkServer.spawned
+            // would be modifying the collection being iterated.
+            List<NetworkIdentity> decoys = new List<NetworkIdentity>();
+
+            foreach (NetworkIdentity identity in NetworkServer.spawned.Values)
+            {
+                if (PowerUps.Decoy.Is(identity))
+                {
+                    decoys.Add(identity);
+                }
+            }
+
+            foreach (NetworkIdentity decoy in decoys)
+            {
+                if (decoy != null)
+                {
+                    NetworkServer.Destroy(decoy.gameObject);
                 }
             }
         }

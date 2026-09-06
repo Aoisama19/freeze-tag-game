@@ -358,6 +358,132 @@ namespace BarafPaani.Tests
             Assert.IsTrue(body.enabled, "and the runner should be visible again");
         }
 
+
+        private static int DecoyCount()
+        {
+            int count = 0;
+
+            foreach (NetworkIdentity identity in NetworkServer.spawned.Values)
+            {
+                if (Decoy.Is(identity))
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        [UnityTest]
+        public IEnumerator Using_the_clone_leaves_a_copy_standing()
+        {
+            yield return StartMatch();
+
+            GameObject runner = Runner();
+            PowerUpHolder holder = runner.GetComponent<PowerUpHolder>();
+
+            Assert.AreEqual(0, DecoyCount(), "nothing should be standing about yet");
+
+            holder.Add(PowerUpKind.Clone);
+            Assert.IsTrue(holder.Use(0), "the clone should have gone off");
+
+            yield return null;
+
+            Assert.AreEqual(1, DecoyCount(), "the clone should have left one copy");
+        }
+
+        [UnityTest]
+        public IEnumerator Two_characters_cloning_get_a_copy_each()
+        {
+            yield return StartMatch();
+
+            // The old build's clone found its bodies with a scene-wide tag
+            // lookup, so two users fought over the same objects. This is that
+            // defect, as a test.
+            GameObject[] runners = NetworkServer.spawned.Values
+                .Where(identity => identity != null && !Decoy.Is(identity))
+                .Select(identity => identity.gameObject)
+                .Where(character =>
+                    character.TryGetComponent(out PlayerRole role)
+                    && role.Role == Role.Runner
+                    && character.GetComponent<PowerUpHolder>() != null)
+                .Take(2)
+                .ToArray();
+
+            Assert.AreEqual(2, runners.Length, "this needs two runners to be worth anything");
+
+            foreach (GameObject runner in runners)
+            {
+                PowerUpHolder holder = runner.GetComponent<PowerUpHolder>();
+                holder.Add(PowerUpKind.Clone);
+                Assert.IsTrue(holder.Use(0));
+            }
+
+            yield return null;
+
+            Assert.AreEqual(2, DecoyCount(), "each of them should have their own");
+        }
+
+        [UnityTest]
+        public IEnumerator A_clone_does_not_count_as_a_runner_to_be_caught()
+        {
+            yield return StartMatch();
+
+            MatchState match = Object.FindFirstObjectByType<MatchState>();
+            Assert.IsNotNull(match);
+
+            int before = match.RunnersTotal;
+
+            PowerUpHolder holder = Runner().GetComponent<PowerUpHolder>();
+            holder.Add(PowerUpKind.Clone);
+            holder.Use(0);
+
+            // MatchState recounts on a tick.
+            yield return new WaitForSeconds(0.6f);
+
+            Assert.AreEqual(
+                before,
+                match.RunnersTotal,
+                "a decoy counted as a runner is a round that can never be won");
+        }
+
+        [UnityTest]
+        public IEnumerator A_clone_cannot_freeze_anybody()
+        {
+            yield return StartMatch();
+
+            PowerUpHolder holder = Runner().GetComponent<PowerUpHolder>();
+            holder.Add(PowerUpKind.Clone);
+            holder.Use(0);
+
+            yield return null;
+
+            NetworkIdentity decoy = NetworkServer.spawned.Values.First(Decoy.Is);
+
+            Assert.IsNull(
+                decoy.GetComponent<TagOnContact>(),
+                "a decoy that could tag people would be a weapon, not a trick");
+        }
+
+        [UnityTest]
+        public IEnumerator A_new_round_clears_away_the_clones()
+        {
+            yield return StartMatch();
+
+            PowerUpHolder holder = Runner().GetComponent<PowerUpHolder>();
+            holder.Add(PowerUpKind.Clone);
+            holder.Use(0);
+
+            yield return null;
+            Assert.AreEqual(1, DecoyCount());
+
+            Object.FindFirstObjectByType<MatchState>().RestartNow();
+            yield return null;
+
+            Assert.AreEqual(
+                0, DecoyCount(), "a decoy outliving its round would stand there all match");
+        }
+
     }
 }
 #endif
