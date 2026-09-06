@@ -957,6 +957,10 @@ namespace BarafPaani.EditorTools
 
             BuildInGameMenu(hud, font);
 
+            Text score = MakeLabel(hud, "ScoreLabel", font, 20, TextAnchor.UpperRight);
+            Place(score.rectTransform, new Vector2(1f, 1f), new Vector2(-24f, -24f),
+                new Vector2(560f, 30f));
+
             MatchHud matchHud = hud.AddComponent<MatchHud>();
 
             SerializedObject state = new SerializedObject(matchHud);
@@ -964,6 +968,7 @@ namespace BarafPaani.EditorTools
             state.FindProperty("_clockLabel").objectReferenceValue = clock;
             state.FindProperty("_resultLabel").objectReferenceValue = result;
             state.FindProperty("_immunityLabel").objectReferenceValue = immunity;
+            state.FindProperty("_scoreLabel").objectReferenceValue = score;
             state.ApplyModifiedPropertiesWithoutUndo();
         }
 

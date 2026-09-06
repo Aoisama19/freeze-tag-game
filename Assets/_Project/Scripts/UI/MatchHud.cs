@@ -28,6 +28,10 @@ namespace BarafPaani.UI
         private Text _immunityLabel;
 
         [SerializeField]
+        [Tooltip("Rounds each side has taken so far.")]
+        private Text _scoreLabel;
+
+        [SerializeField]
         [Tooltip("Clock turns this colour once the round is nearly over.")]
         private Color _urgent = new Color(1f, 0.45f, 0.35f);
 
@@ -65,6 +69,22 @@ namespace BarafPaani.UI
             UpdateClock(match);
             UpdateResult(match);
             UpdateImmunity();
+            UpdateScore(match);
+        }
+
+        /// <summary>
+        /// The running score. Without it a round ends, restarts, and nothing
+        /// carries over — there is no reason to play the next one.
+        /// </summary>
+        private void UpdateScore(MatchState match)
+        {
+            if (_scoreLabel == null)
+            {
+                return;
+            }
+
+            _scoreLabel.text =
+                $"Round {match.RoundNumber}      Catcher {match.CatcherWins}  -  {match.RunnerWins} Runners";
         }
 
         /// <summary>

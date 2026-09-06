@@ -47,6 +47,15 @@ namespace BarafPaani.Gameplay
         [SyncVar]
         private MatchPhase _phase = MatchPhase.Lobby;
 
+        [SyncVar]
+        private int _catcherWins;
+
+        [SyncVar]
+        private int _runnerWins;
+
+        [SyncVar]
+        private int _roundNumber;
+
         private readonly List<Freezable> _freezables = new List<Freezable>();
 
         private float _nextTick;
@@ -59,6 +68,21 @@ namespace BarafPaani.Gameplay
         public MatchOutcome Outcome => _outcome;
 
         public MatchPhase Phase => _phase;
+
+        /// <summary>
+        /// Rounds each side has taken since this match began.
+        ///
+        /// The score belongs to the match, not to the game: leaving and coming
+        /// back reloads the scene and starts a fresh one, which is the right
+        /// answer for a game people drop in and out of rather than one with a
+        /// season behind it.
+        /// </summary>
+        public int CatcherWins => _catcherWins;
+
+        public int RunnerWins => _runnerWins;
+
+        /// <summary>Which round is being played, counting from one.</summary>
+        public int RoundNumber => _roundNumber;
 
         /// <summary>
         /// Whether anyone can be frozen. False in the lobby, so people can wander
@@ -255,6 +279,12 @@ namespace BarafPaani.Gameplay
                 {
                     _phase = MatchPhase.Over;
                     _restartAt = NetworkTime.time + _restartDelay;
+
+                    // Exactly once. This branch is inside the test for a round
+                    // still being in progress, so the tick that settles the
+                    // outcome is the only tick that reaches here — every one
+                    // after it takes the restart path instead.
+                    Score(_outcome);
                 }
 
                 return;
@@ -280,6 +310,7 @@ namespace BarafPaani.Gameplay
         private void BeginRound()
         {
             _phase = MatchPhase.Playing;
+            _roundNumber++;
             _endsAt = NetworkTime.time + RoundLength();
             _outcome = MatchOutcome.InProgress;
 
@@ -402,6 +433,18 @@ namespace BarafPaani.Gameplay
         /// a frame to move, which reads as the game being broken rather than
         /// the catcher being quick.
         /// </summary>
+        [Server]
+        private void Score(MatchOutcome outcome)
+        {
+            if (outcome == MatchOutcome.CatcherWins)
+            {
+                _catcherWins++;
+                return;
+            }
+
+            _runnerWins++;
+        }
+
         [Server]
         private void GrantSpawnImmunity()
         {

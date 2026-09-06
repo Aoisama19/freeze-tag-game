@@ -12,7 +12,8 @@ using UnityEngine.TestTools;
 namespace BarafPaani.Tests
 {
     /// <summary>
-    /// Spawn immunity, and the round being as long as the menu asked for.
+    /// How a round is set up and settled: spawn immunity, the length the menu
+    /// asked for, and the score it leaves behind.
     /// </summary>
     public class RoundSettingsTests
     {
@@ -144,6 +145,60 @@ namespace BarafPaani.Tests
                 manager.RoundSeconds,
                 "a silly number should be clamped, not taken at face value");
         }
+
+        [UnityTest]
+        public IEnumerator A_round_is_scored_once_and_not_once_per_tick()
+        {
+            // MatchState settles the outcome on a quarter-second tick and then
+            // sits on it for six seconds before restarting. Scored in the wrong
+            // place, one win would be counted two dozen times before the next
+            // round began, and nothing would look wrong until the number did.
+            yield return StartMatch();
+
+            MatchState match = Object.FindFirstObjectByType<MatchState>();
+            Assert.IsNotNull(match);
+
+            Assert.AreEqual(0, match.CatcherWins, "nothing has been won yet");
+            Assert.AreEqual(0, match.RunnerWins);
+
+            foreach (NetworkIdentity identity in NetworkServer.spawned.Values)
+            {
+                if (identity != null
+                    && identity.TryGetComponent(out PlayerRole role)
+                    && role.Role == Role.Runner
+                    && identity.TryGetComponent(out Freezable freezable))
+                {
+                    freezable.ClearImmunity();
+                    freezable.Freeze();
+                }
+            }
+
+            // Long enough for several ticks, well short of the restart delay.
+            yield return new WaitForSeconds(1.5f);
+
+            Assert.AreEqual(MatchOutcome.CatcherWins, match.Outcome);
+            Assert.AreEqual(1, match.CatcherWins, "the round was scored more than once");
+            Assert.AreEqual(0, match.RunnerWins, "the wrong side was given the round");
+        }
+
+        [UnityTest]
+        public IEnumerator Rounds_are_numbered_from_one()
+        {
+            yield return StartMatch();
+
+            MatchState match = Object.FindFirstObjectByType<MatchState>();
+
+            Assert.AreEqual(1, match.RoundNumber, "the first round should be round one");
+
+            match.RestartNow();
+            yield return null;
+
+            Assert.AreEqual(2, match.RoundNumber);
+
+            // The score is the match's, so restarting a round does not clear it.
+            Assert.AreEqual(0, match.CatcherWins);
+        }
+
     }
 }
 #endif
