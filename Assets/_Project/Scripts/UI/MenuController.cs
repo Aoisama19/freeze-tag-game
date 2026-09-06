@@ -1,6 +1,8 @@
 using BarafPaani.Core;
 using BarafPaani.Gameplay;
 using UnityEngine;
+using System.Collections.Generic;
+using System.Text;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -39,6 +41,13 @@ namespace BarafPaani.UI
         [SerializeField]
         private Text _botsLabel;
 
+        [Header("Map")]
+        [SerializeField]
+        private Button _mapButton;
+
+        [SerializeField]
+        private Text _mapLabel;
+
         [Header("Play")]
         [SerializeField]
         private Button _singlePlayerButton;
@@ -57,7 +66,7 @@ namespace BarafPaani.UI
 
         [Header("Scenes")]
         [SerializeField]
-        private string _gameScene = "Game";
+        private string _gameScene = "Game_3Talwaar";
 
         [Header("Look")]
         [SerializeField]
@@ -67,6 +76,9 @@ namespace BarafPaani.UI
         private Color _unchosen = new Color(1f, 1f, 1f, 0.55f);
 
         private Role _role = Role.Catcher;
+
+        private readonly List<string> _maps = new List<string>();
+        private int _map;
 
         private void Start()
         {
@@ -85,6 +97,9 @@ namespace BarafPaani.UI
             Wire(_joinButton, () => Launch(GameMode.MultiplayerJoin));
 
             Wire(_quitButton, Quit);
+
+            FindMaps();
+            Wire(_mapButton, NextMap);
 
             if (_fillWithBotsToggle != null)
             {
@@ -106,6 +121,85 @@ namespace BarafPaani.UI
 
             ShowRole();
             ShowBots();
+            ShowMap();
+        }
+
+        /// <summary>
+        /// The maps, read out of the build settings rather than listed here.
+        ///
+        /// A map added to the builder and forgotten in a list in the menu is a
+        /// map nobody can reach; one listed here and missing from the build is a
+        /// button that fails only in a player. Reading the build is the version
+        /// where neither can happen.
+        /// </summary>
+        private void FindMaps()
+        {
+            _maps.Clear();
+
+            for (int i = 0; i < SceneManager.sceneCountInBuildSettings; i++)
+            {
+                string name = System.IO.Path.GetFileNameWithoutExtension(
+                    SceneUtility.GetScenePathByBuildIndex(i));
+
+                if (name.StartsWith("Game_"))
+                {
+                    _maps.Add(name);
+                }
+            }
+
+            if (_maps.Count == 0)
+            {
+                // Falls back to whatever the scene field already says, so the
+                // menu still works in a project mid-rebuild.
+                _maps.Add(_gameScene);
+            }
+
+            int remembered = _setup != null ? _maps.IndexOf(_setup.MapScene) : -1;
+            _map = remembered >= 0 ? remembered : 0;
+        }
+
+        private void NextMap()
+        {
+            _map = (_map + 1) % _maps.Count;
+            ShowMap();
+        }
+
+        private void ShowMap()
+        {
+            if (_maps.Count == 0)
+            {
+                return;
+            }
+
+            _gameScene = _maps[_map];
+            _setup?.ChooseMap(_gameScene);
+
+            if (_mapLabel != null)
+            {
+                _mapLabel.text = $"Map    {Pretty(_maps[_map])}";
+            }
+        }
+
+        /// <summary>Turns a scene name like Game_BadshahiMasjid into "Badshahi Masjid".</summary>
+        private static string Pretty(string sceneName)
+        {
+            string bare = sceneName.StartsWith("Game_") ? sceneName.Substring(5) : sceneName;
+            StringBuilder text = new StringBuilder();
+
+            for (int i = 0; i < bare.Length; i++)
+            {
+                // A capital after a lower-case letter starts a new word. Leading
+                // digits stay attached, so "3Talwaar" does not become "3 Talwaar"
+                // with a stray space in front.
+                if (i > 0 && char.IsUpper(bare[i]) && !char.IsUpper(bare[i - 1]))
+                {
+                    text.Append(' ');
+                }
+
+                text.Append(bare[i]);
+            }
+
+            return text.ToString();
         }
 
         /// <summary>How many runners the match should aim for, kept in range.</summary>

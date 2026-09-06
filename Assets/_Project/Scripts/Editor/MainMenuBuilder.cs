@@ -91,6 +91,19 @@ namespace BarafPaani.EditorTools
 
             InputField botCount = MakeNumberField(canvasObject, font);
 
+            // Cycles rather than a row of buttons: the list comes from the build
+            // settings at runtime, so the menu cannot know how many there will
+            // be to lay out.
+            // Below the join row, which is the last thing occupying the middle.
+            // Everything above y=-208 is already taken by a button.
+            Button mapButton = MakeButton(canvasObject, "MapButton", font, "MAP",
+                new Vector2(0.5f, 0.5f), new Vector2(-150f, -250f), new Vector2(220f, 44f),
+                Sprite("Modesbtns_Rectangle_55.png"));
+
+            Text mapLabel = MakeText(canvasObject, "MapLabel", font, 20, TextAnchor.MiddleLeft);
+            Place(mapLabel.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(60f, -250f),
+                new Vector2(360f, 30f));
+
             Button quit = MakeButton(canvasObject, "QuitButton", font, "QUIT",
                 new Vector2(0.5f, 0f), new Vector2(0f, 70f), new Vector2(220f, 60f),
                 Sprite("Quitbtn_Rectangle_56.png"));
@@ -122,6 +135,8 @@ namespace BarafPaani.EditorTools
             state.FindProperty("_fillWithBotsToggle").objectReferenceValue = botsToggle;
             state.FindProperty("_botCountField").objectReferenceValue = botCount;
             state.FindProperty("_botsLabel").objectReferenceValue = botsLabel;
+            state.FindProperty("_mapButton").objectReferenceValue = mapButton;
+            state.FindProperty("_mapLabel").objectReferenceValue = mapLabel;
             state.FindProperty("_quitButton").objectReferenceValue = quit;
             state.ApplyModifiedPropertiesWithoutUndo();
 
@@ -163,9 +178,17 @@ namespace BarafPaani.EditorTools
         {
             List<EditorBuildSettingsScene> scenes = new List<EditorBuildSettingsScene>
             {
-                new EditorBuildSettingsScene(ScenePath, true),
-                new EditorBuildSettingsScene("Assets/_Project/Scenes/Game.unity", true)
+                new EditorBuildSettingsScene(ScenePath, true)
             };
+
+            // Every map, found on disk rather than listed here. A map added to
+            // the builder's table and forgotten in a second list is a map the
+            // menu offers and the build cannot load.
+            foreach (string path in Directory.GetFiles(
+                         "Assets/_Project/Scenes", "Game_*.unity"))
+            {
+                scenes.Add(new EditorBuildSettingsScene(path.Replace('\\', '/'), true));
+            }
 
             EditorBuildSettings.scenes = scenes.ToArray();
         }

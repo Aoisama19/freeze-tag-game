@@ -10,16 +10,33 @@ namespace BarafPaani.EditorTools
     /// </summary>
     public static class MapProbe
     {
-        private const string MapPrefabPath =
-            "Assets/_Project/Art/Maps/3Talwaar/Prefab/3 Talwaar v4.prefab";
+        private static readonly string[] MapPrefabPaths =
+        {
+            "Assets/_Project/Art/Maps/3Talwaar/Prefab/3 Talwaar v4.prefab",
+            "Assets/_Project/Art/Maps/BadshahiMasjid/Prefab/Badshahi Masjid v2.prefab",
+            "Assets/_Project/Art/Maps/ClockTower/Prefab/Faislabad - Clock Tower v3.prefab",
+        };
 
+        /// <summary>
+        /// Reports every map, so the numbers that go into the builder's table
+        /// come from measuring rather than from guessing.
+        /// </summary>
+        [MenuItem("Baraf-Paani/Probe Maps")]
         public static void Report()
         {
-            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(MapPrefabPath);
+            foreach (string path in MapPrefabPaths)
+            {
+                ReportOne(path);
+            }
+        }
+
+        private static void ReportOne(string mapPrefabPath)
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(mapPrefabPath);
 
             if (prefab == null)
             {
-                Debug.LogError($"PROBE: no prefab at {MapPrefabPath}");
+                Debug.LogError($"PROBE: no prefab at {mapPrefabPath}");
                 return;
             }
 
@@ -43,7 +60,8 @@ namespace BarafPaani.EditorTools
             }
 
             Debug.Log(
-                $"PROBE renderers={renderers.Length} colliders={colliders.Length} " +
+                $"PROBE {System.IO.Path.GetFileNameWithoutExtension(mapPrefabPath)} " +
+                $"renderers={renderers.Length} colliders={colliders.Length} " +
                 $"centre=({bounds.center.x:F1},{bounds.center.y:F1},{bounds.center.z:F1}) " +
                 $"size=({bounds.size.x:F1},{bounds.size.y:F1},{bounds.size.z:F1}) " +
                 $"minY={bounds.min.y:F1} maxY={bounds.max.y:F1}");

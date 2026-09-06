@@ -38,7 +38,7 @@ namespace BarafPaani.Tests
         {
             LogAssert.ignoreFailingMessages = true;
 
-            SceneManager.LoadScene("Game", LoadSceneMode.Single);
+            SceneManager.LoadScene("Game_3Talwaar", LoadSceneMode.Single);
             yield return null;
             yield return null;
 

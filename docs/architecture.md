@@ -201,6 +201,43 @@ or every character thaws audibly the moment it spawns; and footsteps reuse
 `MoveSpeed`, so a round restart teleporting everyone home does not land as a
 burst of running.
 
+## Maps
+
+Three: 3 Talwaar, Badshahi Masjid and the Faisalabad Clock Tower. One scene per
+map, named `Game_<Map>`, all generated from a single table in the builder. The
+builder was written around one map with its measurements as constants; more maps
+meant either four copies of it or one table, and a table is the only version
+where fixing something fixes it everywhere.
+
+Each map carries its own arena centre and size, spawn and pickup ring radii,
+NavMesh volume height and minimap camera height. The numbers come from `MapProbe`,
+which reports a prefab's bounds, rather than from guessing. Badshahi Masjid is
+154 by 282 metres, so its narrow axis caps the arena at 120 with about 17 metres
+of margin either side, and its minarets reach 53 metres, so its map camera sits
+higher than the others or it renders from inside one.
+
+Nothing keeps a list of maps by hand. The build settings are populated by
+scanning the scenes folder, and the menu reads its list back out of the build
+settings, so a map cannot exist in one and be missing from the other — which
+would be a button that fails only in a player build.
+
+The fourth landmark, Faisal Mosque, is not here. It is a bare FBX with no
+prefab, no materials and no textures, and nothing in either old repository
+referenced it. Making it playable is art work, not engineering.
+
+### The texture problem
+
+Badshahi Masjid arrived as 611MB, of which 537MB was eight 4096x4096
+uncompressed BMPs. Three of those were referenced by nothing at all. Three more
+already had lossless PNG twins sitting beside them. The remaining two converted
+to PNG at 3.9MB and 2.9MB, because both turned out to be greyscale and write as
+single channel. The map is now 67MB with nothing lost.
+
+One trap in that conversion, worth not repeating: the BMPs were imported as
+normal maps and their PNG twins were not. Repointing the materials without
+fixing the import setting makes the lighting subtly wrong rather than obviously
+broken, which is the kind of thing found weeks later.
+
 ## Deliberately not doing
 
 - **Client-side prediction or lag compensation.** This is a LAN/friends-scale
@@ -216,11 +253,13 @@ used to load at runtime are a committed model instead.
 
 ## Scope of the first pass
 
-One map, not all four. Freeze, unfreeze, the server-side AI and power-ups get
-proven correct on a single map before 3 Talwaar, Badshahi Masjid, Faisal Mosque
-and Clock Tower are ported across. Each map is then a self-contained addition
-rather than four sets of scene-specific breakage arriving while the core systems
-are still moving.
+One map first, then the rest. Freeze, unfreeze, the server-side AI and power-ups
+were proven correct on 3 Talwaar before the others were ported across, so each
+map was a self-contained addition rather than four sets of scene-specific
+breakage arriving while the core systems were still moving.
+
+Done: 3 Talwaar, Badshahi Masjid and Clock Tower are all playable. Faisal Mosque
+is not, and cannot be without someone texturing it.
 
 ## Versions
 

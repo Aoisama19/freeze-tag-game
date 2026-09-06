@@ -1,3 +1,4 @@
+using System.IO;
 using BarafPaani.AI;
 using BarafPaani.Audio;
 using BarafPaani.Core;
@@ -30,8 +31,6 @@ namespace BarafPaani.EditorTools
         private const string AiPrefabPath = "Assets/_Project/Prefabs/AiCharacter.prefab";
 
         private const string DecoyPrefabPath = "Assets/_Project/Prefabs/Decoy.prefab";
-        private const string ScenePath = "Assets/_Project/Scenes/Game.unity";
-
         /// <summary>
         /// More spawn points than characters, so round-robin never wraps and
         /// puts two people on the same spot. There were four points and five
@@ -41,18 +40,6 @@ namespace BarafPaani.EditorTools
         /// </summary>
         private const int SpawnPointCount = 8;
 
-        /// <summary>
-        /// Ring radius, measured from the arena centre. Kept inside the arena
-        /// walls with room to spare, and puts opposite points 80 metres apart —
-        /// the AI spawns before the human, so the human lands across the ring
-        /// from the catcher rather than next to it.
-        /// </summary>
-        private const float SpawnRingRadius = 40f;
-
-        private const string MapPrefabPath =
-            "Assets/_Project/Art/Maps/3Talwaar/Prefab/3 Talwaar v4.prefab";
-
-        private const string NavMeshAssetPath = "Assets/_Project/Scenes/GameNavMesh.asset";
 
         private const string MenuFontPath = "Assets/_Project/Art/UI/Fonts/Orbitron.ttf";
 
@@ -82,51 +69,6 @@ namespace BarafPaani.EditorTools
 
         private const float BlipSize = 20f;
 
-        /// <summary>
-        /// Half-width of what the minimap shows, in metres. The map follows the
-        /// player rather than framing the whole 120 metre arena, so this is a
-        /// neighbourhood — close enough to read streets, wide enough to see
-        /// someone coming.
-        /// </summary>
-        private const float MinimapViewExtent = 35f;
-
-        /// <summary>
-        /// High enough to clear the tallest building, so the map camera looks
-        /// down on roofs rather than starting inside one.
-        /// </summary>
-        private const float MinimapCameraHeight = 80f;
-
-        /// <summary>
-        /// The playable square, cut down from 3 Talwaar's full 537x464 metres.
-        /// The original walled off roughly 251x198 with road barriers, which is a
-        /// long way for one catcher to cover; this keeps the same streets but
-        /// tightens the game. Widening is a matter of changing this number.
-        /// </summary>
-        private const float ArenaSize = 120f;
-
-        /// <summary>Tall enough that nobody vaults the arena walls.</summary>
-        private const float ArenaHeight = 40f;
-
-        /// <summary>
-        /// How far up the NavMesh volume reaches. Deliberately short: 3 Talwaar's
-        /// buildings have flat roofs, and a volume as tall as the arena walls
-        /// bakes navigable surface onto every one of them. That put two spawn
-        /// points on rooftops, 14 and 30 metres up, and would have let the agents
-        /// path across the skyline. Street level only.
-        /// </summary>
-        private const float NavMeshVolumeHeight = 8f;
-
-        /// <summary>
-        /// Ground sits near y=0, so anything sampled much above this is a roof or
-        /// a ledge rather than a street.
-        /// </summary>
-        private const float MaxSpawnHeight = 3f;
-
-        /// <summary>
-        /// Centre of the playable square, in the map's own coordinates. Sits on
-        /// the middle of the area the original barriers enclosed.
-        /// </summary>
-        private static readonly Vector3 ArenaCentre = new Vector3(11f, 0f, -9f);
 
         /// <summary>
         /// Power-up pickups, and where they sit. Deliberately a shorter ring
@@ -143,10 +85,141 @@ namespace BarafPaani.EditorTools
             PowerUpKind.Clone,
         };
 
-        private const float PickupRingRadius = 24f;
 
         /// <summary>Waist height, so they are visible over a kerb but still walked into.</summary>
         private const float PickupHeight = 1f;
+
+
+        /// <summary>
+        /// Everything that differs between one map and the next.
+        ///
+        /// The builder was written around a single map and had its measurements
+        /// as constants. Three more maps meant either four copies of the builder
+        /// or one table, and a table is the only version where fixing something
+        /// fixes it everywhere.
+        /// </summary>
+        private sealed class MapDefinition
+        {
+            /// <summary>Used for the scene name, the NavMesh asset and the menu.</summary>
+            public string Name;
+
+            public string PrefabPath;
+
+            /// <summary>Centre of the playable square, in the map's own coordinates.</summary>
+            public Vector3 ArenaCentre;
+
+            /// <summary>
+            /// The playable square, cut down from the model's full extent. These
+            /// models are landmarks with a lot of outlying scenery; the arena is
+            /// the part worth playing in, and widening one is a matter of
+            /// changing this number.
+            /// </summary>
+            public float ArenaSize = 120f;
+
+            /// <summary>
+            /// Ring the spawn points sit on, measured from the arena centre.
+            /// Kept well inside the walls so opposite points are far apart — the
+            /// AI spawns before the human, so the human lands across the ring
+            /// from the catcher rather than next to it.
+            /// </summary>
+            public float SpawnRingRadius = 40f;
+
+            /// <summary>
+            /// Ring the power-ups sit on. Deliberately shorter than the spawn
+            /// ring: they are worth walking towards, and a runner heading inward
+            /// for one is a runner heading towards the catcher.
+            /// </summary>
+            public float PickupRingRadius = 24f;
+
+            /// <summary>
+            /// How far up the NavMesh volume reaches. Deliberately short: these
+            /// buildings have flat roofs, and a volume as tall as the arena walls
+            /// bakes navigable surface onto every one of them. That put two spawn
+            /// points on rooftops, 14 and 30 metres up, and would have let the
+            /// agents path across the skyline. Street level only.
+            /// </summary>
+            public float NavMeshVolumeHeight = 8f;
+
+            /// <summary>
+            /// Ground sits near y=0, so anything sampled much above this is a
+            /// roof or a ledge rather than a street.
+            /// </summary>
+            public float MaxSpawnHeight = 3f;
+
+            /// <summary>
+            /// Half-width of what the minimap shows, in metres. The map follows
+            /// the player rather than framing the whole arena, so this is a
+            /// neighbourhood — close enough to read streets, wide enough to see
+            /// someone coming.
+            /// </summary>
+            public float MinimapViewExtent = 35f;
+
+            /// <summary>
+            /// High enough to clear the tallest building, so the map camera looks
+            /// down on roofs rather than starting inside one.
+            /// </summary>
+            public float MinimapCameraHeight = 80f;
+
+            public string ScenePath => $"Assets/_Project/Scenes/Game_{Name}.unity";
+
+            public string NavMeshAssetPath => $"Assets/_Project/Scenes/Game_{Name}NavMesh.asset";
+        }
+
+        /// <summary>
+        /// The maps, in the order the menu offers them.
+        ///
+        /// The centres and sizes come from MapProbe, which reports a prefab's
+        /// bounds without anyone having to open the editor and eyeball it.
+        /// </summary>
+        private static readonly MapDefinition[] Maps =
+        {
+            new MapDefinition
+            {
+                Name = "3Talwaar",
+                PrefabPath = "Assets/_Project/Art/Maps/3Talwaar/Prefab/3 Talwaar v4.prefab",
+
+                // 3 Talwaar is 537x464 metres, most of it outlying scenery. The
+                // original walled off roughly 251x198 with road barriers, which
+                // is a long way for one catcher to cover; this keeps the same
+                // streets and tightens the game.
+                ArenaCentre = new Vector3(11f, 0f, -9f),
+                ArenaSize = 120f,
+            },
+
+            new MapDefinition
+            {
+                Name = "BadshahiMasjid",
+                PrefabPath =
+                    "Assets/_Project/Art/Maps/BadshahiMasjid/Prefab/Badshahi Masjid v2.prefab",
+
+                // 154 wide by 282 long, so the narrow axis is what limits the
+                // arena: 120 leaves about 17 metres of margin either side, and
+                // anything wider would put a wall through the building.
+                ArenaCentre = new Vector3(10.1f, 0f, 60.7f),
+                ArenaSize = 120f,
+
+                // The minarets reach 53 metres, far higher than anything on the
+                // other two maps, so the map camera has to start above them or
+                // it renders from inside one.
+                MinimapCameraHeight = 90f,
+            },
+
+            new MapDefinition
+            {
+                Name = "ClockTower",
+                PrefabPath =
+                    "Assets/_Project/Art/Maps/ClockTower/Prefab/Faislabad - Clock Tower v3.prefab",
+
+                // A 460 metre square of city centred on the origin. Nothing here
+                // is above 15 metres, so the usual camera height clears it
+                // easily and the short NavMesh volume cannot reach a roof.
+                ArenaCentre = new Vector3(0f, 0f, 0f),
+                ArenaSize = 120f,
+            },
+        };
+
+        /// <summary>Tall enough that nobody vaults the arena walls.</summary>
+        private const float ArenaHeight = 40f;
 
         [MenuItem("Baraf-Paani/Rebuild Playable Scene")]
         public static void Rebuild()
@@ -163,10 +236,24 @@ namespace BarafPaani.EditorTools
 
             GameObject playerPrefab = BuildPlayerPrefab(decoyPrefab, sounds);
             GameObject aiPrefab = BuildAiPrefab(decoyPrefab, sounds);
-            BuildScene(playerPrefab, aiPrefab, decoyPrefab, sounds);
+
+            // Made once, outside the loop. Every scene's map camera renders to
+            // it, and it is only ever one scene at a time — but more to the
+            // point, creating it per scene would delete and recreate the asset
+            // each time and leave the scenes built before it pointing at a
+            // texture that no longer exists.
+            RenderTexture minimap = EnsureMinimapTexture();
+
+            foreach (MapDefinition map in Maps)
+            {
+                BuildScene(playerPrefab, aiPrefab, decoyPrefab, sounds, minimap, map);
+            }
 
             AssetDatabase.SaveAssets();
-            Debug.Log("Baraf-Paani: rebuilt the player prefab and the playable scene.");
+
+            Debug.Log(
+                $"Baraf-Paani: rebuilt the prefabs and {Maps.Length} playable "
+                + (Maps.Length == 1 ? "scene." : "scenes."));
         }
 
         private static GameObject BuildPlayerPrefab(GameObject decoyPrefab, SoundBank sounds)
@@ -396,14 +483,16 @@ namespace BarafPaani.EditorTools
             GameObject playerPrefab,
             GameObject aiPrefab,
             GameObject decoyPrefab,
-            SoundBank sounds)
+            SoundBank sounds,
+            RenderTexture minimap,
+            MapDefinition map)
         {
-            Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+            Scene scene = OpenOrCreate(map.ScenePath);
 
             ClearGenerated(scene);
 
-            GameObject map = BuildMap();
-            BuildArenaWalls();
+            GameObject geometry = BuildMap(map);
+            BuildArenaWalls(map);
 
             // The AI walks on this, so it needs a NavMesh surface. Only the
             // component is set up here — GameNetworkManager bakes it when the
@@ -413,21 +502,39 @@ namespace BarafPaani.EditorTools
             // Bounded to the arena rather than the whole map: 3 Talwaar is
             // 537x464 metres, most of it outlying scenery, and without a volume
             // the agents would happily path off into it.
-            NavMeshSurface surface = map.AddComponent<NavMeshSurface>();
+            NavMeshSurface surface = geometry.AddComponent<NavMeshSurface>();
             surface.collectObjects = CollectObjects.Volume;
             surface.center = new Vector3(
-                ArenaCentre.x, (NavMeshVolumeHeight * 0.5f) - 2f, ArenaCentre.z);
-            surface.size = new Vector3(ArenaSize, NavMeshVolumeHeight, ArenaSize);
+                map.ArenaCentre.x, (map.NavMeshVolumeHeight * 0.5f) - 2f, map.ArenaCentre.z);
+            surface.size = new Vector3(map.ArenaSize, map.NavMeshVolumeHeight, map.ArenaSize);
 
             BuildCamera();
             BuildNetworkManager(playerPrefab, aiPrefab, decoyPrefab);
             BuildMatch();
-            BuildHud(sounds);
-            BuildSpawnPoints(surface);
-            BuildPowerUpPickups(sounds);
+            BuildHud(sounds, minimap, map);
+            BuildSpawnPoints(surface, map);
+            BuildPowerUpPickups(sounds, map);
 
             EditorSceneManager.MarkSceneDirty(scene);
-            EditorSceneManager.SaveScene(scene);
+            EditorSceneManager.SaveScene(scene, map.ScenePath);
+        }
+
+        /// <summary>
+        /// Opens a map's scene, making an empty one the first time a map is
+        /// built. Without this, adding a map to the table would fail on a scene
+        /// file nobody has created yet.
+        /// </summary>
+        private static Scene OpenOrCreate(string path)
+        {
+            if (System.IO.File.Exists(path))
+            {
+                return EditorSceneManager.OpenScene(path, OpenSceneMode.Single);
+            }
+
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+
+            return EditorSceneManager.NewScene(
+                NewSceneSetup.EmptyScene, NewSceneMode.Single);
         }
 
         /// <summary>
@@ -438,13 +545,13 @@ namespace BarafPaani.EditorTools
         /// which stores its own component list. Without this, characters fall
         /// straight through the city and the NavMesh has nothing to bake onto.
         /// </summary>
-        private static GameObject BuildMap()
+        private static GameObject BuildMap(MapDefinition definition)
         {
-            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(MapPrefabPath);
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(definition.PrefabPath);
 
             if (prefab == null)
             {
-                Debug.LogError($"No map prefab at {MapPrefabPath}.");
+                Debug.LogError($"No map prefab at {definition.PrefabPath}.");
                 return new GameObject("Map");
             }
 
@@ -481,19 +588,19 @@ namespace BarafPaani.EditorTools
         /// where we have cut it down, so without these a runner can simply leave
         /// the game and stand in the scenery.
         /// </summary>
-        private static void BuildArenaWalls()
+        private static void BuildArenaWalls(MapDefinition map)
         {
             GameObject walls = new GameObject("ArenaWalls");
 
-            float half = ArenaSize * 0.5f;
+            float half = map.ArenaSize * 0.5f;
             const float thickness = 2f;
 
             (string name, Vector3 offset, Vector3 size)[] sides =
             {
-                ("North", new Vector3(0f, 0f, half), new Vector3(ArenaSize, ArenaHeight, thickness)),
-                ("South", new Vector3(0f, 0f, -half), new Vector3(ArenaSize, ArenaHeight, thickness)),
-                ("East", new Vector3(half, 0f, 0f), new Vector3(thickness, ArenaHeight, ArenaSize)),
-                ("West", new Vector3(-half, 0f, 0f), new Vector3(thickness, ArenaHeight, ArenaSize))
+                ("North", new Vector3(0f, 0f, half), new Vector3(map.ArenaSize, ArenaHeight, thickness)),
+                ("South", new Vector3(0f, 0f, -half), new Vector3(map.ArenaSize, ArenaHeight, thickness)),
+                ("East", new Vector3(half, 0f, 0f), new Vector3(thickness, ArenaHeight, map.ArenaSize)),
+                ("West", new Vector3(-half, 0f, 0f), new Vector3(thickness, ArenaHeight, map.ArenaSize))
             };
 
             foreach ((string name, Vector3 offset, Vector3 size) in sides)
@@ -501,7 +608,7 @@ namespace BarafPaani.EditorTools
                 GameObject wall = new GameObject($"Wall {name}");
                 wall.transform.SetParent(walls.transform, false);
                 wall.transform.position =
-                    ArenaCentre + offset + new Vector3(0f, ArenaHeight * 0.5f, 0f);
+                    map.ArenaCentre + offset + new Vector3(0f, ArenaHeight * 0.5f, 0f);
 
                 BoxCollider box = wall.AddComponent<BoxCollider>();
                 box.size = size;
@@ -521,7 +628,7 @@ namespace BarafPaani.EditorTools
         /// a building. The roof check is here too — a power-up fourteen metres
         /// up is not a power-up, it is a thing nobody can ever reach.
         /// </summary>
-        private static void BuildPowerUpPickups(SoundBank sounds)
+        private static void BuildPowerUpPickups(SoundBank sounds, MapDefinition map)
         {
             int placed = 0;
 
@@ -531,17 +638,19 @@ namespace BarafPaani.EditorTools
                 // never sitting directly on top of a spawn point.
                 float angle = (i + 0.5f) * Mathf.PI * 2f / PickupRing.Length;
 
-                Vector3 ideal = ArenaCentre + new Vector3(
-                    Mathf.Sin(angle) * PickupRingRadius, 0f, Mathf.Cos(angle) * PickupRingRadius);
+                Vector3 ideal = map.ArenaCentre + new Vector3(
+                    Mathf.Sin(angle) * map.PickupRingRadius,
+                    0f,
+                    Mathf.Cos(angle) * map.PickupRingRadius);
 
                 if (!NavMesh.SamplePosition(
-                        ideal, out NavMeshHit hit, PickupRingRadius, NavMesh.AllAreas))
+                        ideal, out NavMeshHit hit, map.PickupRingRadius, NavMesh.AllAreas))
                 {
                     Debug.LogWarning($"PowerUp {i + 1}: no navigable ground near {ideal}.");
                     continue;
                 }
 
-                if (hit.position.y > MaxSpawnHeight)
+                if (hit.position.y > map.MaxSpawnHeight)
                 {
                     Debug.LogWarning(
                         $"PowerUp {i + 1}: nearest ground was {hit.position.y:F1}m up, so it was skipped.");
@@ -580,7 +689,7 @@ namespace BarafPaani.EditorTools
             Debug.Log($"Power-up pickups placed on the NavMesh: {placed} of {PickupRing.Length}.");
         }
 
-        private static void BuildSpawnPoints(NavMeshSurface surface)
+        private static void BuildSpawnPoints(NavMeshSurface surface, MapDefinition map)
         {
             // Bake here, at edit time, and keep the result as its own asset.
             //
@@ -601,10 +710,13 @@ namespace BarafPaani.EditorTools
             for (int i = 0; i < SpawnPointCount; i++)
             {
                 float angle = i * Mathf.PI * 2f / SpawnPointCount;
-                Vector3 ideal = ArenaCentre + new Vector3(
-                    Mathf.Sin(angle) * SpawnRingRadius, 0f, Mathf.Cos(angle) * SpawnRingRadius);
+                Vector3 ideal = map.ArenaCentre + new Vector3(
+                    Mathf.Sin(angle) * map.SpawnRingRadius,
+                    0f,
+                    Mathf.Cos(angle) * map.SpawnRingRadius);
 
-                if (!NavMesh.SamplePosition(ideal, out NavMeshHit hit, SpawnRingRadius, NavMesh.AllAreas))
+                if (!NavMesh.SamplePosition(
+                        ideal, out NavMeshHit hit, map.SpawnRingRadius, NavMesh.AllAreas))
                 {
                     Debug.LogWarning($"SpawnPoint {i + 1}: no navigable ground near {ideal}.");
                     continue;
@@ -612,7 +724,7 @@ namespace BarafPaani.EditorTools
 
                 // Belt and braces alongside the short NavMesh volume: never put
                 // anyone on a roof, however the bake turns out.
-                if (hit.position.y > MaxSpawnHeight)
+                if (hit.position.y > map.MaxSpawnHeight)
                 {
                     Debug.LogWarning(
                         $"SpawnPoint {i + 1}: nearest ground was {hit.position.y:F1}m up, so it was skipped.");
@@ -624,7 +736,7 @@ namespace BarafPaani.EditorTools
 
                 // Face the middle, so whoever spawns here is looking at the game
                 // rather than out at empty ground.
-                Vector3 inward = ArenaCentre - hit.position;
+                Vector3 inward = map.ArenaCentre - hit.position;
                 inward.y = 0f;
 
                 if (inward.sqrMagnitude > 0.001f)
@@ -636,7 +748,7 @@ namespace BarafPaani.EditorTools
                 placed++;
             }
 
-            SaveNavMesh(surface);
+            SaveNavMesh(surface, map);
 
             Debug.Log($"Spawn points placed on the NavMesh: {placed} of {SpawnPointCount}.");
         }
@@ -667,15 +779,14 @@ namespace BarafPaani.EditorTools
             match.AddComponent<MatchState>();
         }
 
-        private static void BuildHud(SoundBank sounds)
+        private static void BuildHud(SoundBank sounds, RenderTexture texture, MapDefinition map)
         {
             int mapLayer = EnsureMapLayer();
 
             Sprite circle = MinimapSprites.EnsureCircle();
             Sprite ring = MinimapSprites.EnsureRing();
 
-            RenderTexture texture = BuildMinimapTexture();
-            Camera mapCamera = BuildMinimapCamera(texture, mapLayer);
+            Camera mapCamera = BuildMinimapCamera(texture, mapLayer, map);
 
             GameObject hud = new GameObject("HUD");
             Canvas canvas = hud.AddComponent<Canvas>();
@@ -886,7 +997,7 @@ namespace BarafPaani.EditorTools
         /// does not serialise into a scene, so the camera and the image would
         /// both come back pointing at nothing and the map would render black.
         /// </summary>
-        private static RenderTexture BuildMinimapTexture()
+        private static RenderTexture EnsureMinimapTexture()
         {
             RenderTexture texture = new RenderTexture(MinimapTextureSize, MinimapTextureSize, 16)
             {
@@ -900,19 +1011,20 @@ namespace BarafPaani.EditorTools
             return AssetDatabase.LoadAssetAtPath<RenderTexture>(MinimapTexturePath);
         }
 
-        private static Camera BuildMinimapCamera(RenderTexture texture, int mapLayer)
+        private static Camera BuildMinimapCamera(
+            RenderTexture texture, int mapLayer, MapDefinition map)
         {
             GameObject cameraObject = new GameObject("MinimapCamera");
 
             // Starting position only; the rig moves it onto the local player as
             // soon as there is one.
             cameraObject.transform.position =
-                ArenaCentre + new Vector3(0f, MinimapCameraHeight, 0f);
+                map.ArenaCentre + new Vector3(0f, map.MinimapCameraHeight, 0f);
             cameraObject.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
 
             Camera mapCamera = cameraObject.AddComponent<Camera>();
             mapCamera.orthographic = true;
-            mapCamera.orthographicSize = MinimapViewExtent;
+            mapCamera.orthographicSize = map.MinimapViewExtent;
 
             mapCamera.cullingMask = 1 << mapLayer;
             mapCamera.clearFlags = CameraClearFlags.SolidColor;
@@ -1180,7 +1292,7 @@ namespace BarafPaani.EditorTools
         /// Writes the baked navigation out as its own asset and points the
         /// surface at it, so the scene stores a reference rather than the data.
         /// </summary>
-        private static void SaveNavMesh(NavMeshSurface surface)
+        private static void SaveNavMesh(NavMeshSurface surface, MapDefinition map)
         {
             NavMeshData data = surface.navMeshData;
 
@@ -1190,13 +1302,13 @@ namespace BarafPaani.EditorTools
                 return;
             }
 
-            AssetDatabase.DeleteAsset(NavMeshAssetPath);
-            AssetDatabase.CreateAsset(data, NavMeshAssetPath);
+            AssetDatabase.DeleteAsset(map.NavMeshAssetPath);
+            AssetDatabase.CreateAsset(data, map.NavMeshAssetPath);
             AssetDatabase.SaveAssets();
 
-            surface.navMeshData = AssetDatabase.LoadAssetAtPath<NavMeshData>(NavMeshAssetPath);
+            surface.navMeshData = AssetDatabase.LoadAssetAtPath<NavMeshData>(map.NavMeshAssetPath);
 
-            Debug.Log($"NavMesh baked to {NavMeshAssetPath}.");
+            Debug.Log($"NavMesh baked to {map.NavMeshAssetPath}.");
         }
 
         /// <summary>

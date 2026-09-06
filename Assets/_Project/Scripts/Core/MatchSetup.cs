@@ -25,6 +25,10 @@ namespace BarafPaani.Core
         private string _joinAddress = "localhost";
 
         [SerializeField]
+        [Tooltip("Scene of the map to play. One scene per map, named Game_<Map>.")]
+        private string _mapScene = "Game_3Talwaar";
+
+        [SerializeField]
         [Tooltip("Off means no AI at all — the match is whoever turns up.")]
         private bool _fillWithBots = true;
 
@@ -45,6 +49,18 @@ namespace BarafPaani.Core
         public Role HumanRole => _humanRole;
 
         public string JoinAddress => _joinAddress;
+
+        public string MapScene => _mapScene;
+
+        /// <summary>Records the map. Kept apart from Request so the menu can
+        /// remember a choice without asking for a match yet.</summary>
+        public void ChooseMap(string scene)
+        {
+            if (!string.IsNullOrWhiteSpace(scene))
+            {
+                _mapScene = scene;
+            }
+        }
 
         public bool FillWithBots => _fillWithBots;
 
