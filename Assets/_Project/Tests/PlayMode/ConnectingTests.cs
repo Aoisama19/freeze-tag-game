@@ -4,6 +4,7 @@ using System.Reflection;
 using BarafPaani.Core;
 using BarafPaani.UI;
 using Mirror;
+using Mirror.Discovery;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -146,6 +147,72 @@ namespace BarafPaani.Tests
 
             Assert.AreEqual(
                 SceneName, target, "joining would load a map of the joiner's own choosing");
+        }
+
+        [UnityTest]
+        public IEnumerator It_can_look_for_hosts_on_the_network()
+        {
+            yield return Load();
+
+            Assert.IsNotNull(
+                Object.FindFirstObjectByType<NetworkDiscovery>(),
+                "nothing here listens for hosts");
+
+            Assert.IsNotNull(
+                Object.FindFirstObjectByType<HostBrowser>(), "no list to put them in");
+        }
+
+        [UnityTest]
+        public IEnumerator Both_sides_of_discovery_agree_on_the_handshake()
+        {
+            // The trap this is here for: Mirror compares a secretHandshake on
+            // every discovery packet and drops anything that does not match,
+            // and its OnValidate fills that field with a random number whenever
+            // it is zero. The host's scenes and this one are built by separate
+            // runs, so left to themselves each side would pick its own number,
+            // no packet would ever match, and the host list would simply always
+            // be empty with nothing logged anywhere.
+            yield return Load();
+
+            NetworkDiscovery client = Object.FindFirstObjectByType<NetworkDiscovery>();
+            Assert.IsNotNull(client);
+
+            long handshake = client.secretHandshake;
+            Assert.AreNotEqual(0L, handshake, "an unset handshake is a randomised one");
+
+            foreach (string map in MapScenes())
+            {
+                SceneManager.LoadScene(map, LoadSceneMode.Single);
+                yield return null;
+                yield return null;
+
+                NetworkDiscovery host = Object.FindFirstObjectByType<NetworkDiscovery>();
+
+                Assert.IsNotNull(host, $"{map} cannot advertise itself");
+                Assert.AreEqual(
+                    handshake,
+                    host.secretHandshake,
+                    $"{map} would broadcast on a handshake the joiner ignores");
+
+                if (NetworkManager.singleton != null)
+                {
+                    Object.DestroyImmediate(NetworkManager.singleton.gameObject);
+                }
+            }
+        }
+
+        private static System.Collections.Generic.IEnumerable<string> MapScenes()
+        {
+            for (int i = 0; i < SceneManager.sceneCountInBuildSettings; i++)
+            {
+                string name = System.IO.Path.GetFileNameWithoutExtension(
+                    SceneUtility.GetScenePathByBuildIndex(i));
+
+                if (name.StartsWith("Game_"))
+                {
+                    yield return name;
+                }
+            }
         }
     }
 }

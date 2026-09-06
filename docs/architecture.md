@@ -247,6 +247,21 @@ host's map has finished loading.
 It also gives a failed join somewhere to be reported. Before it, a client that
 could not reach the host sat in a map with no players and no explanation.
 
+**Hosts on the local network are found rather than typed.** The host broadcasts
+on its own UDP port while it is up, the joiner listens, and each match found is
+a row to click. Nothing depends on it: a found address is simply the address you
+would otherwise have typed, and typing one is still there because broadcast does
+not cross subnets, does not reach the internet, and is blocked outright on
+plenty of university and office networks.
+
+One detail that fails silently and so has a test of its own: Mirror compares a
+`secretHandshake` on every discovery packet and drops anything that does not
+match, and its `OnValidate` fills that field with a random number whenever it is
+zero. The map scenes and the join screen are built by separate runs, so left to
+themselves each side would pick its own number, no packet would ever match, and
+the list would simply always be empty with nothing logged anywhere. Both sides
+go through one helper that sets a fixed one, and a test asserts they agree.
+
 The fourth landmark, Faisal Mosque, is not here. It is a bare FBX with no
 prefab, no materials and no textures, and nothing in either old repository
 referenced it. Making it playable is art work, not engineering.

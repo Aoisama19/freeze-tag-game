@@ -2,6 +2,7 @@ using BarafPaani.Core;
 using BarafPaani.UI;
 using kcp2k;
 using Mirror;
+using Mirror.Discovery;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -53,12 +54,32 @@ namespace BarafPaani.EditorTools
 
             canvasObject.AddComponent<GraphicRaycaster>();
 
-            Text status = MakeText(canvasObject, "StatusLabel", font, 30);
-            Place(status.rectTransform, new Vector2(0f, 20f), new Vector2(1200f, 60f));
+            Text title = MakeText(canvasObject, "Title", font, 44);
+            Place(title.rectTransform, new Vector2(0f, 320f), new Vector2(900f, 60f));
+            title.text = "JOIN A MATCH";
+
+            // Rows hang from the top edge of this, so its height is how many
+            // hosts can be listed before they run off the bottom.
+            GameObject listObject = new GameObject("HostList");
+            listObject.transform.SetParent(canvasObject.transform, false);
+            RectTransform list = listObject.AddComponent<RectTransform>();
+            Place(list, new Vector2(0f, 60f), new Vector2(640f, 340f));
+
+            Text empty = MakeText(canvasObject, "EmptyLabel", font, 22);
+            Place(empty.rectTransform, new Vector2(0f, 180f), new Vector2(760f, 70f));
+
+            InputField address = MakeAddressField(canvasObject, font);
+
+            Button connect = MakeButton(canvasObject, font, "ConnectButton", "CONNECT",
+                new Vector2(0f, -230f), new Vector2(260f, 56f));
+
+            Text status = MakeText(canvasObject, "StatusLabel", font, 26);
+            Place(status.rectTransform, new Vector2(0f, -310f), new Vector2(1200f, 50f));
 
             Button back = MakeBackButton(canvasObject, font);
 
             ConnectingScreen screen = canvasObject.AddComponent<ConnectingScreen>();
+            HostBrowser browser = canvasObject.AddComponent<HostBrowser>();
 
             // Loaded after NewScene, which unloads unused assets and would leave
             // a reference taken before it destroyed and silently null.
@@ -70,7 +91,18 @@ namespace BarafPaani.EditorTools
             state.FindProperty("_setup").objectReferenceValue = setup;
             state.ApplyModifiedPropertiesWithoutUndo();
 
-            BuildNetworkManager(setup);
+            NetworkDiscovery discovery = BuildNetworkManager();
+
+            SerializedObject browserState = new SerializedObject(browser);
+            browserState.FindProperty("_discovery").objectReferenceValue = discovery;
+            browserState.FindProperty("_listRoot").objectReferenceValue = list;
+            browserState.FindProperty("_emptyLabel").objectReferenceValue = empty;
+            browserState.FindProperty("_addressField").objectReferenceValue = address;
+            browserState.FindProperty("_connectButton").objectReferenceValue = connect;
+            browserState.FindProperty("_screen").objectReferenceValue = screen;
+            browserState.FindProperty("_setup").objectReferenceValue = setup;
+            browserState.FindProperty("_font").objectReferenceValue = font;
+            browserState.ApplyModifiedPropertiesWithoutUndo();
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -79,13 +111,13 @@ namespace BarafPaani.EditorTools
         }
 
         /// <summary>
-        /// The manager the client connects through, and the launcher that starts
-        /// the attempt. Carries the same spawnable prefabs as a map scene,
+        /// The manager the client connects through, and the discovery that finds
+        /// hosts to offer it. Carries the same spawnable prefabs as a map scene,
         /// because the client has to be able to spawn what the server tells it
         /// about the moment it is connected — which is before the host's map has
         /// finished loading.
         /// </summary>
-        private static void BuildNetworkManager(MatchSetup setup)
+        private static NetworkDiscovery BuildNetworkManager()
         {
             GameObject host = new GameObject("NetworkManager");
 
@@ -101,11 +133,10 @@ namespace BarafPaani.EditorTools
             manager.spawnPrefabs.Add(AssetDatabase.LoadAssetAtPath<GameObject>(AiPrefabPath));
             manager.spawnPrefabs.Add(AssetDatabase.LoadAssetAtPath<GameObject>(DecoyPrefabPath));
 
-            GameLauncher launcher = host.AddComponent<GameLauncher>();
-
-            SerializedObject state = new SerializedObject(launcher);
-            state.FindProperty("_setup").objectReferenceValue = setup;
-            state.ApplyModifiedPropertiesWithoutUndo();
+            // No GameLauncher here on purpose. Arriving on this screen is not a
+            // request to connect to anything — the browser connects when a host
+            // is picked, or when an address is typed and CONNECT is pressed.
+            return DiscoverySetup.AddTo(host, transport);
         }
 
         private static void BuildCamera()
@@ -136,7 +167,14 @@ namespace BarafPaani.EditorTools
 
         private static Button MakeBackButton(GameObject canvas, Font font)
         {
-            GameObject buttonObject = new GameObject("BackButton");
+            return MakeButton(canvas, font, "BackButton", "BACK",
+                new Vector2(0f, -390f), new Vector2(260f, 56f));
+        }
+
+        private static Button MakeButton(
+            GameObject canvas, Font font, string name, string text, Vector2 position, Vector2 size)
+        {
+            GameObject buttonObject = new GameObject(name);
             buttonObject.transform.SetParent(canvas.transform, false);
 
             Image plate = buttonObject.AddComponent<Image>();
@@ -145,14 +183,47 @@ namespace BarafPaani.EditorTools
             Button button = buttonObject.AddComponent<Button>();
             button.targetGraphic = plate;
 
-            Place(buttonObject.GetComponent<RectTransform>(),
-                new Vector2(0f, -90f), new Vector2(260f, 60f));
+            Place(buttonObject.GetComponent<RectTransform>(), position, size);
 
             Text label = MakeText(buttonObject, "Label", font, 22);
             Stretch(label.rectTransform);
-            label.text = "BACK";
+            label.text = text;
 
             return button;
+        }
+
+        /// <summary>
+        /// Typing an address is the thing that always works. Broadcast does not
+        /// cross subnets, does not reach the internet, and is blocked outright
+        /// on plenty of networks, so the list is a convenience on top of this
+        /// rather than a replacement for it.
+        /// </summary>
+        private static InputField MakeAddressField(GameObject canvas, Font font)
+        {
+            GameObject fieldObject = new GameObject("AddressField");
+            fieldObject.transform.SetParent(canvas.transform, false);
+
+            Image plate = fieldObject.AddComponent<Image>();
+            plate.color = new Color(0f, 0f, 0f, 0.35f);
+
+            Place(fieldObject.GetComponent<RectTransform>(),
+                new Vector2(0f, -150f), new Vector2(420f, 56f));
+
+            Text text = MakeText(fieldObject, "Text", font, 22);
+            Stretch(text.rectTransform);
+            text.supportRichText = false;
+
+            Text placeholder = MakeText(fieldObject, "Placeholder", font, 22);
+            Stretch(placeholder.rectTransform);
+            placeholder.text = "address";
+            placeholder.color = new Color(1f, 1f, 1f, 0.4f);
+
+            InputField field = fieldObject.AddComponent<InputField>();
+            field.textComponent = text;
+            field.placeholder = placeholder;
+            field.lineType = InputField.LineType.SingleLine;
+
+            return field;
         }
 
         private static Text MakeText(GameObject parent, string name, Font font, int size)

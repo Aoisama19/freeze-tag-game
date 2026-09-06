@@ -1424,6 +1424,11 @@ namespace BarafPaani.EditorTools
             GameNetworkManager manager = host.AddComponent<GameNetworkManager>();
             manager.transport = transport;
             manager.playerPrefab = playerPrefab;
+
+            // So a host can be found on the local network rather than having its
+            // address read out over the phone. StartMultiplayerHost turns it on;
+            // single-player never does.
+            DiscoverySetup.AddTo(host, transport);
             manager.autoCreatePlayer = true;
             manager.playerSpawnMethod = PlayerSpawnMethod.RoundRobin;
 

@@ -105,6 +105,15 @@ namespace BarafPaani.Core
             networkSceneName = SceneManager.GetActiveScene().name;
 
             StartHost();
+
+            // Announce the match on the local network, so a friend can pick it
+            // out of a list instead of being told an address over the phone.
+            // Nothing depends on it working: discovery is a convenience on top
+            // of the address, not a replacement for it.
+            if (TryGetComponent(out Mirror.Discovery.NetworkDiscovery discovery))
+            {
+                discovery.AdvertiseServer();
+            }
         }
 
         /// <summary>

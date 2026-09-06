@@ -45,6 +45,26 @@ namespace BarafPaani.UI
         private float _waitingSince;
         private bool _everConnected;
         private bool _givenUp;
+        private bool _attempted;
+        private string _target;
+
+        /// <summary>
+        /// Told by the host browser that a connection is now being made, and to
+        /// where.
+        ///
+        /// Without this the screen cannot tell "nobody has picked a host yet"
+        /// from "the attempt failed" — both are simply a client that is not
+        /// connecting — and it would report a failure the moment the browser
+        /// opened.
+        /// </summary>
+        public void AttemptStarted(string address)
+        {
+            _attempted = true;
+            _givenUp = false;
+            _everConnected = false;
+            _target = address;
+            _waitingSince = Time.time;
+        }
 
         private void Start()
         {
@@ -64,7 +84,16 @@ namespace BarafPaani.UI
                 return;
             }
 
-            string host = _setup != null ? _setup.JoinAddress : "the host";
+            if (!_attempted)
+            {
+                // Still choosing. The browser owns the screen until then.
+                _statusLabel.enabled = false;
+                return;
+            }
+
+            _statusLabel.enabled = true;
+
+            string host = _target ?? (_setup != null ? _setup.JoinAddress : "the host");
 
             if (NetworkClient.isConnected)
             {
