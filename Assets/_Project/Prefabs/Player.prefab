@@ -124,6 +124,8 @@ MonoBehaviour:
   _animator: {fileID: 5798590827091073073}
   _smoothing: 0.12
   _teleportSpeed: 25
+  _topClipSpeed: 5.662317
+  _maxPlaybackRate: 1.5
 --- !u!114 &4102716337248104886
 MonoBehaviour:
   m_ObjectHideFlags: 0

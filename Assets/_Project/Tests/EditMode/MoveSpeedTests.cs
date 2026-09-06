@@ -61,5 +61,42 @@ namespace BarafPaani.Tests
 
             Assert.AreEqual(7.5f, speed, 0.001f, "the sprint speed is real movement");
         }
+
+        [Test]
+        public void Walking_plays_the_animation_at_its_own_pace()
+        {
+            Assert.AreEqual(1f, MoveSpeed.PlaybackRate(2f, 5.66f, 1.5f), 0.001f);
+        }
+
+        [Test]
+        public void Running_at_exactly_the_clip_speed_is_left_alone()
+        {
+            Assert.AreEqual(1f, MoveSpeed.PlaybackRate(5.66f, 5.66f, 1.5f), 0.001f);
+        }
+
+        [Test]
+        public void Sprinting_past_the_clip_speeds_the_legs_up_to_match()
+        {
+            // The sprint speed against the run clip's own travel speed: without
+            // this the legs would turn over at 5.66 m/s while the ground went
+            // past at 7.5, which is what skating looks like.
+            float rate = MoveSpeed.PlaybackRate(7.5f, 5.66f, 1.5f);
+
+            Assert.AreEqual(7.5f / 5.66f, rate, 0.001f);
+        }
+
+        [Test]
+        public void The_speed_up_is_capped_short_of_looking_silly()
+        {
+            Assert.AreEqual(1.5f, MoveSpeed.PlaybackRate(40f, 5.66f, 1.5f), 0.001f);
+        }
+
+        [Test]
+        public void An_unset_clip_speed_never_slows_the_animation_to_a_crawl()
+        {
+            // A prefab built before the clip speed was measured would carry
+            // zero here, and dividing by it would stop the animation dead.
+            Assert.AreEqual(1f, MoveSpeed.PlaybackRate(7.5f, 0f, 1.5f), 0.001f);
+        }
     }
 }

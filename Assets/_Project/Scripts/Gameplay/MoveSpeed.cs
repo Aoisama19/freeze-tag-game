@@ -37,5 +37,29 @@ namespace BarafPaani.Gameplay
 
             return speed > teleportSpeed ? 0f : speed;
         }
+
+        /// <summary>
+        /// How fast to play the animation back.
+        ///
+        /// The blend tree covers everything up to the fastest clip's own travel
+        /// speed and no further, so a character sprinting quicker than any clip
+        /// was authored for keeps the same leg speed while the ground goes past
+        /// faster — the skating you see in a lot of games. Playing the clip back
+        /// proportionally faster puts the feet back on the ground.
+        ///
+        /// Only ever speeds up. Slowing the clip down below the top speed would
+        /// fight the blend tree, which is already handling that range.
+        /// </summary>
+        public static float PlaybackRate(float speed, float topClipSpeed, float maxRate)
+        {
+            if (topClipSpeed <= 0.1f || speed <= topClipSpeed)
+            {
+                return 1f;
+            }
+
+            // Capped, because past a point a sped-up run reads as a cartoon
+            // rather than as a fast one. Some slide is better than that.
+            return Mathf.Min(speed / topClipSpeed, Mathf.Max(1f, maxRate));
+        }
     }
 }

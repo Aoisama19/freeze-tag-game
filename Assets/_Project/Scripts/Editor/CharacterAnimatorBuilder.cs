@@ -81,6 +81,19 @@ namespace BarafPaani.EditorTools
                 + $"run at {ForwardSpeed(run, RunSpeedFallback):0.00} m/s.");
         }
 
+        /// <summary>
+        /// The fastest speed the blend tree can cover on its own — the run
+        /// clip's own travel speed. Past this there is no quicker clip to blend
+        /// to, so CharacterAnimation speeds the playback up instead. Read from
+        /// the clip so the prefab and the controller cannot disagree.
+        /// </summary>
+        public static float TopClipSpeed()
+        {
+            AnimationClip run = LoadClip("Humanoid_Run");
+
+            return run == null ? RunSpeedFallback : ForwardSpeed(run, RunSpeedFallback);
+        }
+
         private static ChildMotion Child(AnimationClip clip, float threshold)
         {
             return new ChildMotion

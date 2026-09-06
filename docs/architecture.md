@@ -109,6 +109,11 @@ would land on someone who is not standing where they appear to be. The blend
 tree's thresholds are still read from the clips' own travel speeds at build
 time, so the legs turn over at roughly the rate the ground goes past.
 
+The blend tree runs out of clip at the top of its range — sprinting is 7.5 m/s
+and the fastest cycle we have travels 5.66 — so above that the run is played
+back proportionally faster rather than left to skate, capped at 1.5x before it
+starts to look like a cartoon.
+
 Colour goes through a `MaterialPropertyBlock` rather than `renderer.material`,
 which clones the shared material once per character and leaks the clone.
 

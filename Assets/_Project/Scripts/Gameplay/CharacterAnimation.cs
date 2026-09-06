@@ -31,6 +31,17 @@ namespace BarafPaani.Gameplay
         [SerializeField]
         private float _teleportSpeed = 25f;
 
+        [Header("Stride")]
+        [SerializeField]
+        [Tooltip("How fast the quickest clip carries the character. Set from the clip itself "
+                 + "when the prefab is built. Sprinting past this speeds the animation up "
+                 + "rather than leaving the feet to skate.")]
+        private float _topClipSpeed = 5.66f;
+
+        [SerializeField]
+        [Tooltip("Ceiling on that speed-up. Past this a fast run reads as a cartoon.")]
+        private float _maxPlaybackRate = 1.5f;
+
         private Vector3 _lastPosition;
         private float _speed;
         private bool _frozen;
@@ -75,6 +86,10 @@ namespace BarafPaani.Gameplay
                 _speed, measured, _smoothing <= 0f ? 1f : Time.deltaTime / _smoothing);
 
             _animator.SetFloat(SpeedParameter, _speed);
+
+            // The blend tree runs out of clip at the top of its range, so
+            // anything faster is handled by playing the run back quicker.
+            _animator.speed = MoveSpeed.PlaybackRate(_speed, _topClipSpeed, _maxPlaybackRate);
         }
 
         /// <summary>
@@ -87,6 +102,8 @@ namespace BarafPaani.Gameplay
 
             if (_animator != null)
             {
+                // Update owns this the rest of the time; 1 is only a sane
+                // starting point for the frame after thawing.
                 _animator.speed = frozen ? 0f : 1f;
             }
         }

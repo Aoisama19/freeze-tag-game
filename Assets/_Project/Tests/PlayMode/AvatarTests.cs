@@ -152,7 +152,9 @@ namespace BarafPaani.Tests
             Animator animator = runner.GetComponentInChildren<Animator>();
             Freezable freezable = runner.GetComponent<Freezable>();
 
-            Assert.AreEqual(1f, animator.speed, "a free runner should be animating");
+            // Not exactly 1: a character sprinting past the fastest clip plays
+            // back quicker than that. What matters is that it is running at all.
+            Assert.Greater(animator.speed, 0f, "a free runner should be animating");
 
             freezable.Freeze();
             yield return null;
@@ -163,7 +165,7 @@ namespace BarafPaani.Tests
             freezable.Unfreeze();
             yield return null;
 
-            Assert.AreEqual(1f, animator.speed, "thawing should start the animation again");
+            Assert.Greater(animator.speed, 0f, "thawing should start the animation again");
         }
 
         [UnityTest]

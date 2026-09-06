@@ -780,6 +780,12 @@ namespace BarafPaani.EditorTools
             CharacterAnimation animation = root.AddComponent<CharacterAnimation>();
             SerializedObject motion = new SerializedObject(animation);
             motion.FindProperty("_animator").objectReferenceValue = animator;
+
+            // Sprinting is faster than any clip we have, so the character needs
+            // to know where the clips run out.
+            motion.FindProperty("_topClipSpeed").floatValue =
+                CharacterAnimatorBuilder.TopClipSpeed();
+
             motion.ApplyModifiedPropertiesWithoutUndo();
 
             ReportHeight(renderers);
