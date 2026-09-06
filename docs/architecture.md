@@ -146,6 +146,32 @@ rather than a trigger, because nothing in this game carries a Rigidbody.
 Written as `OnTriggerEnter` it worked for the human — a `CharacterController`
 raises trigger events — and silently never fired for a single bot.
 
+## The lobby
+
+A hosted match waits before it plays. People arrive, pick a side with E, and the
+host starts it with Enter. Single-player skips it — there is nobody to wait for
+and the side was already chosen in the menu.
+
+This is what closes the gap where only the first player into a match got a
+choice of side. Changing sides is a request, not an assignment: the client says
+what it would like and the server checks it against `LobbyRules`, so two clients
+both asking to be the catcher is settled by the server answering one of them no.
+
+Three rules are worth stating:
+
+- **Sides are locked once a round starts.** Allowed mid-round, a catcher about
+  to lose could simply stop being the catcher.
+- **A bot never holds the catcher seat against a person.** With bots on there is
+  always an AI catcher the moment nobody human takes it, so treating that as an
+  occupant would mean a host who picked Runner in the menu could never change
+  their mind. The bot stands down instead.
+- **A match that cannot be won will not start.** With bots off, the humans
+  present have to cover both sides themselves. This was the sharp edge left by
+  the bot options: the host picks Runner, bots are off, and nothing is chasing.
+
+Nothing freezes while the lobby is open, so a catcher cannot start early.
+Rounds after the first restart directly rather than returning to the lobby.
+
 ## Deliberately not doing
 
 - **Client-side prediction or lag compensation.** This is a LAN/friends-scale

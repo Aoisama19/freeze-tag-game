@@ -784,6 +784,23 @@ namespace BarafPaani.EditorTools
             powerUpState.FindProperty("_activeLabel").objectReferenceValue = active;
             powerUpState.ApplyModifiedPropertiesWithoutUndo();
 
+            Text lobbyTitle = MakeLabel(hud, "LobbyTitleLabel", font, 34, TextAnchor.MiddleCenter);
+            Place(lobbyTitle.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 140f), new Vector2(900f, 46f));
+
+            Text lobbyRoster = MakeLabel(hud, "LobbyRosterLabel", font, 24, TextAnchor.MiddleCenter);
+            Place(lobbyRoster.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 70f), new Vector2(900f, 70f));
+
+            Text lobbyHint = MakeLabel(hud, "LobbyHintLabel", font, 20, TextAnchor.MiddleCenter);
+            Place(lobbyHint.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 0f), new Vector2(900f, 32f));
+
+            LobbyHud lobby = hud.AddComponent<LobbyHud>();
+
+            SerializedObject lobbyState = new SerializedObject(lobby);
+            lobbyState.FindProperty("_titleLabel").objectReferenceValue = lobbyTitle;
+            lobbyState.FindProperty("_rosterLabel").objectReferenceValue = lobbyRoster;
+            lobbyState.FindProperty("_hintLabel").objectReferenceValue = lobbyHint;
+            lobbyState.ApplyModifiedPropertiesWithoutUndo();
+
             MatchHud matchHud = hud.AddComponent<MatchHud>();
 
             SerializedObject state = new SerializedObject(matchHud);

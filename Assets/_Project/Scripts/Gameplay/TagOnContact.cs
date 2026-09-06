@@ -26,6 +26,7 @@ namespace BarafPaani.Gameplay
         private readonly Collider[] _hits = new Collider[16];
         private PlayerRole _role;
         private Freezable _freezable;
+        private MatchState _match;
         private float _nextCheckTime;
 
         private void Awake()
@@ -46,10 +47,35 @@ namespace BarafPaani.Gameplay
             ResolveContacts();
         }
 
+        /// <summary>
+        /// Whether the match is in a phase where a tag means anything.
+        ///
+        /// Allowed when there is no MatchState at all: a scene without one is a
+        /// test harness spawning characters directly, and the alternative is
+        /// every such test silently doing nothing.
+        /// </summary>
+        private bool FreezingAllowed()
+        {
+            if (_match == null)
+            {
+                _match = FindFirstObjectByType<MatchState>();
+            }
+
+            return _match == null || _match.FreezingAllowed;
+        }
+
         private void ResolveContacts()
         {
             // A frozen character cannot tag or free anyone, so skip the query.
             if (_freezable.IsFrozen)
+            {
+                return;
+            }
+
+            // Nor can anyone while the match is still in the lobby. People mill
+            // about choosing sides in there, and a catcher who could start
+            // early would make the lobby a place to be avoided.
+            if (!FreezingAllowed())
             {
                 return;
             }

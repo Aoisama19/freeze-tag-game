@@ -44,6 +44,9 @@ namespace BarafPaani.Gameplay
         [SyncVar]
         private MatchOutcome _outcome = MatchOutcome.InProgress;
 
+        [SyncVar]
+        private MatchPhase _phase = MatchPhase.Lobby;
+
         private readonly List<Freezable> _freezables = new List<Freezable>();
 
         private float _nextTick;
@@ -55,13 +58,161 @@ namespace BarafPaani.Gameplay
 
         public MatchOutcome Outcome => _outcome;
 
+        public MatchPhase Phase => _phase;
+
+        /// <summary>
+        /// Whether anyone can be frozen. False in the lobby, so people can wander
+        /// about picking sides without the catcher starting early.
+        /// </summary>
+        public bool FreezingAllowed => _phase == MatchPhase.Playing;
+
         /// <summary>Time left in the round, worked out locally from the end time.</summary>
         public float SecondsRemaining =>
             Mathf.Max(0f, (float)(_endsAt - NetworkTime.time));
 
         public override void OnStartServer()
         {
+            // Single-player has nobody to wait for and the side was already
+            // chosen in the menu, so the lobby would be a screen you press past
+            // every time. Hosting waits, because that is the point of it.
+            if (NetworkManager.singleton is Core.GameNetworkManager manager
+                && manager.ActiveMode != Core.GameMode.SinglePlayer)
+            {
+                OpenLobby();
+                return;
+            }
+
             BeginRound();
+        }
+
+        /// <summary>Puts the match back to waiting, with sides open to change.</summary>
+        [Server]
+        public void OpenLobby()
+        {
+            _phase = MatchPhase.Lobby;
+            _outcome = MatchOutcome.InProgress;
+            _endsAt = 0d;
+
+            ThawEveryone();
+            ClearPowerUps();
+            RemoveDecoys();
+            CountRunners();
+        }
+
+        /// <summary>
+        /// Leaves the lobby and plays. Refused unless the sides make a match
+        /// that can actually be won — the check that used to be missing, which
+        /// is how a host could choose Runner with bots off and leave nobody
+        /// catching.
+        /// </summary>
+        [Server]
+        public bool StartMatch()
+        {
+            if (_phase != MatchPhase.Lobby)
+            {
+                return false;
+            }
+
+            CountHumans(out int catchers, out int runners);
+
+            bool fillWithBots = NetworkManager.singleton is Core.GameNetworkManager manager
+                && manager.FillWithBots;
+
+            if (!LobbyRules.CanStart(fillWithBots, catchers, runners))
+            {
+                return false;
+            }
+
+            BeginRound();
+            return true;
+        }
+
+        /// <summary>
+        /// Counts the people, not the bots. What the lobby is deciding is
+        /// whether the humans present cover both sides; bots fill the rest.
+        /// </summary>
+        [Server]
+        public void CountHumans(out int catchers, out int runners)
+        {
+            catchers = 0;
+            runners = 0;
+
+            foreach (NetworkIdentity identity in NetworkServer.spawned.Values)
+            {
+                if (identity == null
+                    || identity.connectionToClient == null
+                    || !identity.TryGetComponent(out PlayerRole role)
+                    || PowerUps.Decoy.Is(identity))
+                {
+                    continue;
+                }
+
+                if (role.Role == Role.Catcher)
+                {
+                    catchers++;
+                    continue;
+                }
+
+                runners++;
+            }
+        }
+
+        /// <summary>
+        /// Whether another person is already catching, so the lobby can refuse a
+        /// second.
+        ///
+        /// People only. A bot holding the seat is not a reason to tell somebody
+        /// no — with bots on there is always an AI catcher the moment nobody
+        /// human took it, so counting it here would mean a host who picked
+        /// Runner in the menu could never change their mind.
+        /// </summary>
+        [Server]
+        public bool HasHumanCatcherOtherThan(PlayerRole asking)
+        {
+            foreach (NetworkIdentity identity in NetworkServer.spawned.Values)
+            {
+                if (identity == null
+                    || identity.connectionToClient == null
+                    || !identity.TryGetComponent(out PlayerRole role)
+                    || role == asking
+                    || PowerUps.Decoy.Is(identity))
+                {
+                    continue;
+                }
+
+                if (role.Role == Role.Catcher)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Stands any bot catcher down to a runner, so the person taking the
+        /// seat is the only one in it. The spare bot is tidied up by the usual
+        /// headcount when the round begins.
+        /// </summary>
+        [Server]
+        public void MakeWayForCatcher(PlayerRole taking)
+        {
+            foreach (NetworkIdentity identity in NetworkServer.spawned.Values)
+            {
+                if (identity == null
+                    || identity.connectionToClient != null
+                    || !identity.TryGetComponent(out PlayerRole role)
+                    || role == taking
+                    || PowerUps.Decoy.Is(identity))
+                {
+                    continue;
+                }
+
+                if (role.Role == Role.Catcher)
+                {
+                    role.SetRole(Role.Runner);
+                }
+            }
         }
 
         [ServerCallback]
@@ -73,6 +224,13 @@ namespace BarafPaani.Gameplay
             }
 
             _nextTick = Time.time + _tickInterval;
+
+            if (_phase == MatchPhase.Lobby)
+            {
+                // Kept current so the lobby can show who is on which side.
+                CountRunners();
+                return;
+            }
 
             // A round with no end time has not been started. Guards against ever
             // silently running a match whose clock reads as already expired.
@@ -95,6 +253,7 @@ namespace BarafPaani.Gameplay
 
                 if (_outcome != MatchOutcome.InProgress)
                 {
+                    _phase = MatchPhase.Over;
                     _restartAt = NetworkTime.time + _restartDelay;
                 }
 
@@ -120,6 +279,7 @@ namespace BarafPaani.Gameplay
         [Server]
         private void BeginRound()
         {
+            _phase = MatchPhase.Playing;
             _endsAt = NetworkTime.time + _roundSeconds;
             _outcome = MatchOutcome.InProgress;
 
