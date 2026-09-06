@@ -13,6 +13,8 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -510,6 +512,7 @@ namespace BarafPaani.EditorTools
 
             BuildCamera();
             EnsureLight();
+            BuildEventSystem();
             BuildNetworkManager(playerPrefab, aiPrefab, decoyPrefab);
             BuildMatch();
             BuildHud(sounds, minimap, map);
@@ -952,6 +955,8 @@ namespace BarafPaani.EditorTools
             immunity.color = new Color(0.6f, 1f, 0.7f);
             immunity.enabled = false;
 
+            BuildInGameMenu(hud, font);
+
             MatchHud matchHud = hud.AddComponent<MatchHud>();
 
             SerializedObject state = new SerializedObject(matchHud);
@@ -960,6 +965,94 @@ namespace BarafPaani.EditorTools
             state.FindProperty("_resultLabel").objectReferenceValue = result;
             state.FindProperty("_immunityLabel").objectReferenceValue = immunity;
             state.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        /// <summary>
+        /// Buttons do nothing without one of these, and a game scene built from
+        /// code has no reason to have picked one up. The in-game menu was
+        /// unclickable without it — the same way the main menu shipped once.
+        /// </summary>
+        private static void BuildEventSystem()
+        {
+            if (Object.FindFirstObjectByType<EventSystem>() != null)
+            {
+                return;
+            }
+
+            GameObject events = new GameObject("EventSystem");
+            events.AddComponent<EventSystem>();
+
+            // The Input System's module. The legacy one reads UnityEngine.Input,
+            // which throws in this project.
+            InputSystemUIInputModule module = events.AddComponent<InputSystemUIInputModule>();
+            module.AssignDefaultActions();
+        }
+
+        /// <summary>
+        /// The overlay reached with Escape: resume, leave the match, or quit.
+        ///
+        /// Built inactive. It is not a pause — the match carries on without the
+        /// player reading it, because the server has not stopped for anyone.
+        /// </summary>
+        private static void BuildInGameMenu(GameObject hud, Font font)
+        {
+            GameObject panel = new GameObject("InGameMenu");
+            panel.transform.SetParent(hud.transform, false);
+
+            RectTransform panelRect = panel.AddComponent<RectTransform>();
+            Stretch(panelRect);
+
+            Image shade = panel.AddComponent<Image>();
+            shade.color = new Color(0.02f, 0.03f, 0.05f, 0.72f);
+
+            Text heading = MakeLabel(panel, "Heading", font, 40, TextAnchor.MiddleCenter);
+            Place(heading.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 150f),
+                new Vector2(600f, 56f));
+            heading.text = "PAUSED";
+
+            Button resume = MakeHudButton(panel, "ResumeButton", font, "RESUME", 60f);
+            Button leave = MakeHudButton(panel, "LeaveButton", font, "LEAVE MATCH", -30f);
+            Button quit = MakeHudButton(panel, "QuitButton", font, "QUIT GAME", -120f);
+
+            Text hint = MakeLabel(panel, "Hint", font, 18, TextAnchor.MiddleCenter);
+            Place(hint.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, -210f),
+                new Vector2(700f, 30f));
+            hint.text = "The match keeps running while this is open";
+
+            InGameMenu menu = hud.AddComponent<InGameMenu>();
+
+            SerializedObject state = new SerializedObject(menu);
+            state.FindProperty("_panel").objectReferenceValue = panel;
+            state.FindProperty("_resumeButton").objectReferenceValue = resume;
+            state.FindProperty("_leaveButton").objectReferenceValue = leave;
+            state.FindProperty("_quitButton").objectReferenceValue = quit;
+            state.ApplyModifiedPropertiesWithoutUndo();
+
+            panel.SetActive(false);
+        }
+
+        private static Button MakeHudButton(
+            GameObject parent, string name, Font font, string label, float y)
+        {
+            GameObject button = new GameObject(name);
+            button.transform.SetParent(parent.transform, false);
+
+            RectTransform rect = button.AddComponent<RectTransform>();
+            Place(rect, new Vector2(0.5f, 0.5f), new Vector2(0f, y), new Vector2(340f, 68f));
+
+            Image plate = button.AddComponent<Image>();
+            plate.color = new Color(0.16f, 0.19f, 0.26f, 0.95f);
+
+            Button control = button.AddComponent<Button>();
+            control.targetGraphic = plate;
+
+            Text text = MakeLabel(button, "Label", font, 26, TextAnchor.MiddleCenter);
+            Stretch(text.rectTransform);
+            text.text = label;
+
+            button.AddComponent<ButtonFeel>();
+
+            return control;
         }
 
         private static Text MakeLabel(GameObject parent, string name, Font font, int size, TextAnchor anchor)
@@ -1448,10 +1541,6 @@ namespace BarafPaani.EditorTools
             SerializedObject managerState = new SerializedObject(manager);
             managerState.FindProperty("_aiCharacterPrefab").objectReferenceValue = aiPrefab;
             managerState.ApplyModifiedPropertiesWithoutUndo();
-
-            // Mirror's stock Host/Client/Server buttons. Temporary — it goes when
-            // there is a real menu driving GameNetworkManager instead.
-            host.AddComponent<NetworkManagerHUD>();
 
             // Starts whatever the menu asked for. Does nothing when the scene is
             // opened on its own, which is what keeps it usable without the menu.

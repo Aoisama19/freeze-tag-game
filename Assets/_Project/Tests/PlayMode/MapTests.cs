@@ -5,6 +5,10 @@ using BarafPaani.Core;
 using BarafPaani.Gameplay;
 using BarafPaani.Gameplay.PowerUps;
 using Mirror;
+using UnityEngine.InputSystem.UI;
+using UnityEngine.EventSystems;
+using BarafPaani.UI;
+using System.Reflection;
 using Unity.AI.Navigation;
 using NUnit.Framework;
 using UnityEngine;
@@ -82,6 +86,37 @@ namespace BarafPaani.Tests
 
                 Assert.IsNotNull(
                     Object.FindFirstObjectByType<Canvas>(), $"{map} has no HUD");
+
+                // Without one of these nothing in the scene is clickable, and
+                // the in-game menu would open onto three dead buttons. This is
+                // the same mistake that shipped the main menu unclickable.
+                EventSystem events = Object.FindFirstObjectByType<EventSystem>();
+                Assert.IsNotNull(events, $"{map} has no EventSystem");
+
+                Assert.IsNotNull(
+                    events.GetComponent<InputSystemUIInputModule>(),
+                    $"{map} needs the Input System's module, not the legacy one");
+
+                Assert.IsNull(
+                    events.GetComponent<StandaloneInputModule>(),
+                    $"{map} has a module that reads UnityEngine.Input, which throws here");
+
+                // Mirror's stock Host/Client/Server buttons were scaffolding for
+                // before there was a menu. They should not be in a built game.
+                Assert.IsNull(
+                    Object.FindFirstObjectByType<NetworkManagerHUD>(),
+                    $"{map} still shows Mirror's debug buttons");
+
+                InGameMenu inGame = Object.FindFirstObjectByType<InGameMenu>();
+                Assert.IsNotNull(inGame, $"{map} has no way out except closing the game");
+
+                GameObject panel = (GameObject)typeof(InGameMenu)
+                    .GetField("_panel", BindingFlags.NonPublic | BindingFlags.Instance)
+                    .GetValue(inGame);
+
+                Assert.IsNotNull(panel, $"{map} has an in-game menu with nothing in it");
+                Assert.IsFalse(
+                    panel.activeSelf, $"{map} starts with the pause menu already covering the screen");
 
                 // The one that actually shipped broken. Scenes for maps added
                 // after the first are created from an empty scene, which has no
