@@ -86,14 +86,40 @@ namespace BarafPaani.UI
                 return;
             }
 
-            float remaining = _effects != null ? _effects.SpeedBoostRemaining : 0f;
-
-            _activeLabel.enabled = remaining > 0f;
-
-            if (remaining > 0f)
+            if (_effects == null)
             {
-                _activeLabel.text = $"Speed  {remaining:0.0}s";
+                _activeLabel.enabled = false;
+                return;
             }
+
+            float speed = _effects.SpeedBoostRemaining;
+            float hidden = _effects.InvisibilityRemaining;
+
+            _activeLabel.enabled = speed > 0f || hidden > 0f;
+
+            if (!_activeLabel.enabled)
+            {
+                return;
+            }
+
+            _line.Clear();
+
+            if (speed > 0f)
+            {
+                _line.Append($"Speed  {speed:0.0}s");
+            }
+
+            if (hidden > 0f)
+            {
+                if (_line.Length > 0)
+                {
+                    _line.Append("   ");
+                }
+
+                _line.Append($"Invisible  {hidden:0.0}s");
+            }
+
+            _activeLabel.text = _line.ToString();
         }
 
         private static string Name(PowerUpKind kind)

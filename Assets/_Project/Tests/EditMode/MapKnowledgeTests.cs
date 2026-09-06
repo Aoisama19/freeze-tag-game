@@ -50,5 +50,44 @@ namespace BarafPaani.Tests
             Assert.IsTrue(MapKnowledge.NeedsLineOfSight(Role.Runner, Role.Catcher));
             Assert.IsFalse(MapKnowledge.NeedsLineOfSight(Role.Runner, Role.Runner));
         }
+
+        [Test]
+        public void A_hidden_runner_is_lost_even_to_the_catcher()
+        {
+            // The catcher's global view is exactly what invisibility is bought
+            // to beat, so this is the case that matters.
+            Assert.IsFalse(
+                MapKnowledge.KnowsPosition(
+                    Role.Catcher, Role.Runner, targetSeen: true, targetHidden: true));
+        }
+
+        [Test]
+        public void A_hidden_team_mate_drops_off_the_map_too()
+        {
+            // Allies are otherwise known unconditionally.
+            Assert.IsFalse(
+                MapKnowledge.KnowsPosition(
+                    Role.Runner, Role.Runner, targetSeen: true, targetHidden: true));
+        }
+
+        [Test]
+        public void A_hidden_catcher_is_not_given_away_by_being_in_view()
+        {
+            Assert.IsFalse(
+                MapKnowledge.KnowsPosition(
+                    Role.Runner, Role.Catcher, targetSeen: true, targetHidden: true));
+        }
+
+        [Test]
+        public void Nothing_changes_for_a_character_who_is_not_hidden()
+        {
+            Assert.IsTrue(
+                MapKnowledge.KnowsPosition(
+                    Role.Catcher, Role.Runner, targetSeen: false, targetHidden: false));
+
+            Assert.IsFalse(
+                MapKnowledge.KnowsPosition(
+                    Role.Runner, Role.Catcher, targetSeen: false, targetHidden: false));
+        }
     }
 }

@@ -38,6 +38,7 @@ namespace BarafPaani.Gameplay
         private PlayerRole _role;
         private MaterialPropertyBlock _block;
         private bool _frozen;
+        private bool _hidden;
 
         private void Awake()
         {
@@ -68,6 +69,19 @@ namespace BarafPaani.Gameplay
             Refresh();
         }
 
+        /// <summary>
+        /// Takes the character off everyone's screen but its own.
+        ///
+        /// You keep seeing yourself, because a power-up that blanked your own
+        /// character would make you unplayable rather than hidden. Everyone
+        /// else loses you entirely.
+        /// </summary>
+        public void SetHidden(bool hidden)
+        {
+            _hidden = hidden;
+            Refresh();
+        }
+
         private void Refresh()
         {
             if (_renderers == null || _block == null)
@@ -81,6 +95,8 @@ namespace BarafPaani.Gameplay
                     ? _catcherColour
                     : _runnerColour;
 
+            bool visible = !_hidden || isLocalPlayer;
+
             foreach (Renderer renderer in _renderers)
             {
                 if (renderer == null)
@@ -88,6 +104,7 @@ namespace BarafPaani.Gameplay
                     continue;
                 }
 
+                renderer.enabled = visible;
                 renderer.GetPropertyBlock(_block);
                 _block.SetColor(BaseColour, colour);
                 _block.SetColor(LegacyColour, colour);

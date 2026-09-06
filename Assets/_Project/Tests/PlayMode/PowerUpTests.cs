@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using System.Collections;
 using System.Linq;
+using System.Reflection;
 using BarafPaani.Core;
 using BarafPaani.Gameplay;
 using BarafPaani.Gameplay.PowerUps;
@@ -279,6 +280,84 @@ namespace BarafPaani.Tests
                 0.001f,
                 "the agent should be back to its own speed, not left running fast");
         }
+
+        [UnityTest]
+        public IEnumerator Going_invisible_hides_a_runner_from_the_catcher()
+        {
+            yield return StartMatch();
+
+            GameObject runner = Runner();
+            PowerUpHolder holder = runner.GetComponent<PowerUpHolder>();
+            PowerUpEffects effects = runner.GetComponent<PowerUpEffects>();
+
+            Assert.IsFalse(
+                PowerUpEffects.IsHidden(runner.GetComponent<PlayerRole>()),
+                "nobody starts hidden");
+
+            holder.Add(PowerUpKind.Invisibility);
+            Assert.IsTrue(holder.Use(0));
+
+            yield return null;
+
+            Assert.IsTrue(effects.Invisible, "the runner should be hidden");
+            Assert.Greater(effects.InvisibilityRemaining, 0f);
+
+            // The rule the catcher's global view goes through.
+            Assert.IsFalse(
+                MapKnowledge.KnowsPosition(
+                    Role.Catcher,
+                    Role.Runner,
+                    targetSeen: true,
+                    targetHidden: PowerUpEffects.IsHidden(runner.GetComponent<PlayerRole>())),
+                "a hidden runner should be lost to the catcher");
+        }
+
+        [UnityTest]
+        public IEnumerator An_invisible_runner_is_not_drawn()
+        {
+            yield return StartMatch();
+
+            GameObject runner = Runner();
+            PowerUpHolder holder = runner.GetComponent<PowerUpHolder>();
+
+            Renderer body = runner.GetComponentInChildren<SkinnedMeshRenderer>();
+            Assert.IsNotNull(body, "the runner has nothing to hide");
+            Assert.IsTrue(body.enabled, "it should start visible");
+
+            holder.Add(PowerUpKind.Invisibility);
+            holder.Use(0);
+
+            yield return null;
+
+            Assert.IsFalse(body.enabled, "a hidden bot should not be drawn");
+        }
+
+        [UnityTest]
+        public IEnumerator Invisibility_wears_off_and_gives_the_runner_back()
+        {
+            yield return StartMatch();
+
+            GameObject runner = Runner();
+            PowerUpEffects effects = runner.GetComponent<PowerUpEffects>();
+            Renderer body = runner.GetComponentInChildren<SkinnedMeshRenderer>();
+
+            // A short one, so the test does not sit through the real duration.
+            typeof(PowerUpEffects)
+                .GetField("_invisibleSeconds", BindingFlags.NonPublic | BindingFlags.Instance)
+                ?.SetValue(effects, 0.3f);
+
+            runner.GetComponent<PowerUpHolder>().Add(PowerUpKind.Invisibility);
+            runner.GetComponent<PowerUpHolder>().Use(0);
+
+            yield return null;
+            Assert.IsTrue(effects.Invisible);
+
+            yield return new WaitForSeconds(0.8f);
+
+            Assert.IsFalse(effects.Invisible, "it should have worn off");
+            Assert.IsTrue(body.enabled, "and the runner should be visible again");
+        }
+
     }
 }
 #endif

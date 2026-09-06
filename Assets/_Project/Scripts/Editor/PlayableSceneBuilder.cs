@@ -131,11 +131,11 @@ namespace BarafPaani.EditorTools
         private static readonly PowerUpKind[] PickupRing =
         {
             PowerUpKind.SpeedBoost,
+            PowerUpKind.Invisibility,
             PowerUpKind.SpeedBoost,
+            PowerUpKind.Invisibility,
             PowerUpKind.SpeedBoost,
-            PowerUpKind.SpeedBoost,
-            PowerUpKind.SpeedBoost,
-            PowerUpKind.SpeedBoost,
+            PowerUpKind.Invisibility,
         };
 
         private const float PickupRingRadius = 24f;

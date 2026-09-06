@@ -33,15 +33,48 @@ namespace BarafPaani.Gameplay.PowerUps
         [Tooltip("Network time the boost runs out, so the HUD can count it down.")]
         private double _speedBoostEndsAt;
 
+        [Header("Invisibility")]
+        [SerializeField]
+        private float _invisibleSeconds = 5f;
+
+        [SyncVar(hook = nameof(OnInvisibleChanged))]
+        private bool _invisible;
+
+        [SyncVar]
+        private double _invisibleEndsAt;
+
         private PlayerMotor _motor;
         private NavMeshAgent _agent;
+        private CharacterAppearance _appearance;
         private float _agentBaseSpeed = -1f;
 
         // What has actually been applied, so the hook and the server can both
         // call Apply without the second one undoing the first.
         private bool? _appliedBoost;
+        private bool? _appliedInvisible;
 
         public bool SpeedBoosted => _speedBoosted;
+
+        /// <summary>
+        /// Whether this character is hidden. Read by the minimap, by sight and
+        /// by the AI, all of which go through MapKnowledge for what it means.
+        /// </summary>
+        public bool Invisible => _invisible;
+
+        public float InvisibilityRemaining =>
+            _invisible ? Mathf.Max(0f, (float)(_invisibleEndsAt - NetworkTime.time)) : 0f;
+
+        /// <summary>
+        /// Whether a character is hidden, for the call sites that hold a
+        /// component rather than this one. Answers false for anything that
+        /// cannot be hidden at all, so callers do not each need the null check.
+        /// </summary>
+        public static bool IsHidden(Component character)
+        {
+            return character != null
+                && character.TryGetComponent(out PowerUpEffects effects)
+                && effects.Invisible;
+        }
 
         /// <summary>Seconds left on the boost, for the HUD. Zero when it is not running.</summary>
         public float SpeedBoostRemaining =>
@@ -51,6 +84,7 @@ namespace BarafPaani.Gameplay.PowerUps
         {
             _motor = GetComponent<PlayerMotor>();
             _agent = GetComponent<NavMeshAgent>();
+            _appearance = GetComponent<CharacterAppearance>();
 
             if (_agent != null)
             {
@@ -60,12 +94,18 @@ namespace BarafPaani.Gameplay.PowerUps
 
         public override void OnStartServer()
         {
-            ApplySpeedBoost(_speedBoosted);
+            ApplyAll();
         }
 
         public override void OnStartClient()
         {
+            ApplyAll();
+        }
+
+        private void ApplyAll()
+        {
             ApplySpeedBoost(_speedBoosted);
+            ApplyInvisible(_invisible);
         }
 
         /// <summary>
@@ -79,6 +119,9 @@ namespace BarafPaani.Gameplay.PowerUps
             {
                 case PowerUpKind.SpeedBoost:
                     return BeginSpeedBoost();
+
+                case PowerUpKind.Invisibility:
+                    return BeginInvisibility();
 
                 default:
                     return false;
@@ -98,6 +141,16 @@ namespace BarafPaani.Gameplay.PowerUps
             return true;
         }
 
+        [Server]
+        private bool BeginInvisibility()
+        {
+            _invisibleEndsAt = NetworkTime.time + _invisibleSeconds;
+            _invisible = true;
+            ApplyInvisible(true);
+
+            return true;
+        }
+
         /// <summary>Ends everything. Called when a round restarts.</summary>
         [Server]
         public void ClearAll()
@@ -105,6 +158,10 @@ namespace BarafPaani.Gameplay.PowerUps
             _speedBoosted = false;
             _speedBoostEndsAt = 0d;
             ApplySpeedBoost(false);
+
+            _invisible = false;
+            _invisibleEndsAt = 0d;
+            ApplyInvisible(false);
         }
 
         [ServerCallback]
@@ -114,6 +171,36 @@ namespace BarafPaani.Gameplay.PowerUps
             {
                 _speedBoosted = false;
                 ApplySpeedBoost(false);
+            }
+
+            if (_invisible && NetworkTime.time >= _invisibleEndsAt)
+            {
+                _invisible = false;
+                ApplyInvisible(false);
+            }
+        }
+
+        private void OnInvisibleChanged(bool previous, bool current)
+        {
+            ApplyInvisible(current);
+        }
+
+        private void ApplyInvisible(bool invisible)
+        {
+            if (_appliedInvisible == invisible)
+            {
+                return;
+            }
+
+            _appliedInvisible = invisible;
+
+            // Only the look is applied here. Being hidden from the minimap and
+            // from the AI is not something to switch off somewhere — it falls
+            // out of MapKnowledge reading Invisible, so there is no second
+            // copy of the rule to forget to undo.
+            if (_appearance != null)
+            {
+                _appearance.SetHidden(invisible);
             }
         }
 

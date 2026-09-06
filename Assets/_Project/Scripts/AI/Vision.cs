@@ -1,5 +1,6 @@
 using System;
 using BarafPaani.Gameplay;
+using BarafPaani.Gameplay.PowerUps;
 using UnityEngine;
 
 namespace BarafPaani.AI
@@ -73,6 +74,16 @@ namespace BarafPaani.AI
                 }
 
                 if (!accept(role, freezable))
+                {
+                    continue;
+                }
+
+                // Hidden characters are not seen, whoever is looking. Checked
+                // here rather than in every caller's filter, so a power-up
+                // cannot be defeated by one query that forgot about it.
+                // MapKnowledge says what hidden means for who knows what; for
+                // sight it is this simple.
+                if (PowerUpEffects.IsHidden(role))
                 {
                     continue;
                 }

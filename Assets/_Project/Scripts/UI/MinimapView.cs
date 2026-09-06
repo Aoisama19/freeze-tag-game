@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using BarafPaani.Gameplay;
+using BarafPaani.Gameplay.PowerUps;
 using Mirror;
 using UnityEngine;
 using UnityEngine.UI;
@@ -114,6 +115,16 @@ namespace BarafPaani.UI
             MapAwareness awareness,
             out Vector3 world)
         {
+            // Never yourself: going invisible should not lose you your own blip
+            // and leave you unable to read your own map.
+            if (identity != viewer.netIdentity && PowerUpEffects.IsHidden(role))
+            {
+                // Not even your own team-mates, and not the catcher's otherwise
+                // unlimited view of the runners. MapKnowledge owns the rule.
+                world = Vector3.zero;
+                return false;
+            }
+
             if (!MapKnowledge.NeedsLineOfSight(viewer.Role, role.Role))
             {
                 world = identity.transform.position;

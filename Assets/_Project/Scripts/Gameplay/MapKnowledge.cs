@@ -22,6 +22,10 @@ namespace BarafPaani.Gameplay
     ///
     /// - A runner knows where the catcher is only while it can see one. This is
     ///   the asymmetry that makes breaking line of sight worth doing.
+    ///
+    /// - Nobody knows where a hidden character is, whichever side they are on.
+    ///   This is the one thing that overrides the catcher's global view, and it
+    ///   is what the invisibility power-up buys.
     /// </summary>
     public static class MapKnowledge
     {
@@ -46,6 +50,25 @@ namespace BarafPaani.Gameplay
         /// </param>
         public static bool KnowsPosition(Role viewerRole, Role targetRole, bool targetSeen)
         {
+            return KnowsPosition(viewerRole, targetRole, targetSeen, targetHidden: false);
+        }
+
+        /// <summary>
+        /// As above, but for a target that may be hidden.
+        ///
+        /// Hidden beats everything, including the catcher's otherwise unlimited
+        /// view. A power-up that only removed a blip while leaving the AI
+        /// walking straight at you would be worse than useless — it would look
+        /// like the game cheating.
+        /// </summary>
+        public static bool KnowsPosition(
+            Role viewerRole, Role targetRole, bool targetSeen, bool targetHidden)
+        {
+            if (targetHidden)
+            {
+                return false;
+            }
+
             return !NeedsLineOfSight(viewerRole, targetRole) || targetSeen;
         }
     }

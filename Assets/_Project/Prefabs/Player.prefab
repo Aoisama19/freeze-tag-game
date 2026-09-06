@@ -260,6 +260,7 @@ MonoBehaviour:
   syncInterval: 0
   _speedBoostSeconds: 6
   _speedBoostMultiplier: 1.7
+  _invisibleSeconds: 5
 --- !u!114 &8093290643971050516
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -1,5 +1,6 @@
 using System;
 using BarafPaani.Gameplay;
+using BarafPaani.Gameplay.PowerUps;
 using Mirror;
 using UnityEngine;
 using UnityEngine.AI;
@@ -123,7 +124,13 @@ namespace BarafPaani.AI
             // runners and a runner wants frozen ones, so this single predicate
             // covers the catcher's chase and the runner's rescue.
             _acceptApproachTarget = (role, state) =>
-                AiTargeting.WantsToApproach(_role.Role, _freezable.IsFrozen, role.Role, state.IsFrozen);
+                AiTargeting.WantsToApproach(_role.Role, _freezable.IsFrozen, role.Role, state.IsFrozen)
+
+                // A catcher's global view is the thing invisibility is bought
+                // to beat. Without this the blip would vanish while the bot
+                // walked straight at you, which reads as the game cheating.
+                && MapKnowledge.KnowsPosition(
+                    _role.Role, role.Role, targetSeen: true, targetHidden: PowerUpEffects.IsHidden(role));
 
             // Guarding is a different question: the catcher wants to know where
             // frozen runners are precisely because it does not want to tag them.
