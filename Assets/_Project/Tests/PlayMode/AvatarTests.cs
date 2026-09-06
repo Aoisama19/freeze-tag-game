@@ -156,6 +156,10 @@ namespace BarafPaani.Tests
             // back quicker than that. What matters is that it is running at all.
             Assert.Greater(animator.speed, 0f, "a free runner should be animating");
 
+            // Immunity cleared first: everyone is safe for a few seconds at the
+            // start of a round, so a freeze here would be refused for a reason
+            // that has nothing to do with what this test is about.
+            freezable.ClearImmunity();
             freezable.Freeze();
             yield return null;
 
@@ -197,7 +201,13 @@ namespace BarafPaani.Tests
 
             Color free = Tint(runner);
 
-            runner.GetComponent<Freezable>().Freeze();
+            Freezable freezable = runner.GetComponent<Freezable>();
+
+            // Everyone is safe for a few seconds at the start of a round, so a
+            // freeze here would otherwise be refused for a reason that has
+            // nothing to do with what this test is about.
+            freezable.ClearImmunity();
+            freezable.Freeze();
             yield return null;
 
             Assert.AreNotEqual(free, Tint(runner), "a frozen runner should look frozen");

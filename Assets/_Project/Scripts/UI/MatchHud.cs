@@ -24,6 +24,10 @@ namespace BarafPaani.UI
         private Text _resultLabel;
 
         [SerializeField]
+        [Tooltip("Says how long you are still safe for after a round begins.")]
+        private Text _immunityLabel;
+
+        [SerializeField]
         [Tooltip("Clock turns this colour once the round is nearly over.")]
         private Color _urgent = new Color(1f, 0.45f, 0.35f);
 
@@ -60,6 +64,33 @@ namespace BarafPaani.UI
 
             UpdateClock(match);
             UpdateResult(match);
+            UpdateImmunity();
+        }
+
+        /// <summary>
+        /// How long you are still safe for. Worth saying out loud: a player who
+        /// does not know they are briefly untouchable will run away from the
+        /// catcher rather than past them.
+        /// </summary>
+        private void UpdateImmunity()
+        {
+            if (_immunityLabel == null)
+            {
+                return;
+            }
+
+            Mirror.NetworkIdentity me = Mirror.NetworkClient.localPlayer;
+
+            float left = me != null && me.TryGetComponent(out Freezable freezable)
+                ? freezable.ImmunityRemaining
+                : 0f;
+
+            _immunityLabel.enabled = left > 0f;
+
+            if (left > 0f)
+            {
+                _immunityLabel.text = $"Safe for {left:0.0}s";
+            }
         }
 
         /// <summary>

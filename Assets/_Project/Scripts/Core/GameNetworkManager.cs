@@ -70,8 +70,29 @@ namespace BarafPaani.Core
             set => _humanRole = value;
         }
 
+        [SerializeField]
+        [Tooltip("Seconds a character cannot be frozen for after arriving or being sent back to spawn.")]
+        private float _spawnImmunitySeconds = 3f;
+
+        [SerializeField]
+        [Tooltip("Length of a round. Zero leaves the match to use its own setting.")]
+        private float _roundSeconds;
+
         /// <summary>How this session was started. Set before the host comes up.</summary>
         public GameMode ActiveMode { get; private set; } = GameMode.SinglePlayer;
+
+        /// <summary>How long a character stays safe after spawning.</summary>
+        public float SpawnImmunitySeconds => _spawnImmunitySeconds;
+
+        /// <summary>
+        /// Round length asked for by the menu. Zero means nothing was asked for
+        /// and the match keeps its own default.
+        /// </summary>
+        public float RoundSeconds
+        {
+            get => _roundSeconds;
+            set => _roundSeconds = Mathf.Clamp(value, 0f, MatchSetup.MaxRoundSeconds);
+        }
 
         /// <summary>
         /// Starts a host with no room for remote clients. Mirror only enforces
@@ -151,6 +172,16 @@ namespace BarafPaani.Core
             if (player.TryGetComponent(out PlayerRole role))
             {
                 role.SetRole(isFirstIn ? _humanRole : Role.Runner);
+            }
+
+            // Before the spawn, for the same reason the role is: in host mode
+            // Mirror deserializes the spawn payload back onto this same object,
+            // so anything written afterwards is overwritten by what the payload
+            // said. Arriving mid-round next to the catcher is otherwise an
+            // instant freeze.
+            if (player.TryGetComponent(out Freezable freezable))
+            {
+                freezable.GrantImmunity(_spawnImmunitySeconds);
             }
 
             NetworkServer.AddPlayerForConnection(conn, player);
@@ -330,6 +361,11 @@ namespace BarafPaani.Core
             if (character.TryGetComponent(out PlayerRole playerRole))
             {
                 playerRole.SetRole(role);
+            }
+
+            if (character.TryGetComponent(out Freezable freezable))
+            {
+                freezable.GrantImmunity(_spawnImmunitySeconds);
             }
 
             NetworkServer.Spawn(character);

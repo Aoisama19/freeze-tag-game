@@ -22,6 +22,33 @@ namespace BarafPaani.Gameplay
             float squaredDistance,
             float squaredRange)
         {
+            return Resolve(
+                actorRole,
+                actorIsFrozen,
+                targetRole,
+                targetIsFrozen,
+                targetIsImmune: false,
+                squaredDistance,
+                squaredRange);
+        }
+
+        /// <summary>
+        /// As above, for a target that may still be under spawn immunity.
+        ///
+        /// Immunity stops a catcher freezing someone, and nothing else. It does
+        /// not stop a team-mate freeing them: being rescued is not something
+        /// anyone needs protecting from, and a runner frozen with time left on
+        /// the clock would otherwise be stuck until it ran out.
+        /// </summary>
+        public static TagOutcome Resolve(
+            Role actorRole,
+            bool actorIsFrozen,
+            Role targetRole,
+            bool targetIsFrozen,
+            bool targetIsImmune,
+            float squaredDistance,
+            float squaredRange)
+        {
             // A frozen character is out of the game until someone frees them.
             if (actorIsFrozen)
             {
@@ -46,7 +73,15 @@ namespace BarafPaani.Gameplay
                 // event fired twice, and the runners-left counter — the one
                 // deciding win and loss — was decremented past where it should
                 // have stopped.
-                return targetIsFrozen ? TagOutcome.None : TagOutcome.Freeze;
+                if (targetIsFrozen)
+                {
+                    return TagOutcome.None;
+                }
+
+                // Just arrived, or just been put back at the start of a round.
+                // Without this a catcher standing on a spawn point takes people
+                // the instant they appear, which is not a game.
+                return targetIsImmune ? TagOutcome.None : TagOutcome.Freeze;
             }
 
             // A free runner reaching a frozen team-mate frees them.

@@ -48,6 +48,13 @@ namespace BarafPaani.UI
         [SerializeField]
         private Text _mapLabel;
 
+        [Header("Round")]
+        [SerializeField]
+        private Button _roundButton;
+
+        [SerializeField]
+        private Text _roundLabel;
+
         [Header("Play")]
         [SerializeField]
         private Button _singlePlayerButton;
@@ -84,6 +91,11 @@ namespace BarafPaani.UI
         private readonly List<string> _maps = new List<string>();
         private int _map;
 
+        /// <summary>Round lengths the menu offers, in seconds.</summary>
+        private static readonly float[] RoundLengths = { 60f, 120f, 180f, 300f, 600f };
+
+        private int _round = 2;
+
         private void Start()
         {
             if (_setup != null)
@@ -104,6 +116,9 @@ namespace BarafPaani.UI
 
             FindMaps();
             Wire(_mapButton, NextMap);
+
+            FindRoundLength();
+            Wire(_roundButton, NextRoundLength);
 
             if (_fillWithBotsToggle != null)
             {
@@ -126,6 +141,7 @@ namespace BarafPaani.UI
             ShowRole();
             ShowBots();
             ShowMap();
+            ShowRoundLength();
         }
 
         /// <summary>
@@ -182,6 +198,47 @@ namespace BarafPaani.UI
             {
                 _mapLabel.text = $"Map    {Pretty(_maps[_map])}";
             }
+        }
+
+        private void FindRoundLength()
+        {
+            if (_setup == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < RoundLengths.Length; i++)
+            {
+                if (Mathf.Approximately(RoundLengths[i], _setup.RoundSeconds))
+                {
+                    _round = i;
+                    return;
+                }
+            }
+        }
+
+        private void NextRoundLength()
+        {
+            _round = (_round + 1) % RoundLengths.Length;
+            ShowRoundLength();
+        }
+
+        private void ShowRoundLength()
+        {
+            float seconds = RoundLengths[_round];
+            _setup?.ChooseRoundLength(seconds);
+
+            if (_roundLabel != null)
+            {
+                _roundLabel.text = $"Round    {Minutes(seconds)}";
+            }
+        }
+
+        private static string Minutes(float seconds)
+        {
+            int whole = Mathf.RoundToInt(seconds / 60f);
+
+            return whole == 1 ? "1 minute" : $"{whole} minutes";
         }
 
         /// <summary>Turns a scene name like Game_BadshahiMasjid into "Badshahi Masjid".</summary>

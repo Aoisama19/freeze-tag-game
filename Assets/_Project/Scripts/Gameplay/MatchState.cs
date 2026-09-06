@@ -280,13 +280,14 @@ namespace BarafPaani.Gameplay
         private void BeginRound()
         {
             _phase = MatchPhase.Playing;
-            _endsAt = NetworkTime.time + _roundSeconds;
+            _endsAt = NetworkTime.time + RoundLength();
             _outcome = MatchOutcome.InProgress;
 
             ThawEveryone();
             ClearPowerUps();
             RemoveDecoys();
             ReturnEveryoneToSpawn();
+            GrantSpawnImmunity();
             CountRunners();
         }
 
@@ -373,6 +374,46 @@ namespace BarafPaani.Gameplay
                 if (decoy != null)
                 {
                     NetworkServer.Destroy(decoy.gameObject);
+                }
+            }
+        }
+
+        /// <summary>
+        /// How long this round runs for. The menu's answer if it gave one,
+        /// otherwise this component's own setting — which is what a map scene
+        /// opened on its own uses.
+        /// </summary>
+        private float RoundLength()
+        {
+            if (NetworkManager.singleton is Core.GameNetworkManager manager
+                && manager.RoundSeconds > 0f)
+            {
+                return manager.RoundSeconds;
+            }
+
+            return _roundSeconds;
+        }
+
+        /// <summary>
+        /// Everyone is safe for a moment at the start of a round.
+        ///
+        /// Without it a catcher who happens to be standing near a spawn point
+        /// when the round begins takes whoever lands there before they have had
+        /// a frame to move, which reads as the game being broken rather than
+        /// the catcher being quick.
+        /// </summary>
+        [Server]
+        private void GrantSpawnImmunity()
+        {
+            float seconds = NetworkManager.singleton is Core.GameNetworkManager manager
+                ? manager.SpawnImmunitySeconds
+                : 3f;
+
+            foreach (Freezable freezable in _freezables)
+            {
+                if (freezable != null)
+                {
+                    freezable.GrantImmunity(seconds);
                 }
             }
         }

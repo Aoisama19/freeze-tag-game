@@ -279,6 +279,34 @@ normal maps and their PNG twins were not. Repointing the materials without
 fixing the import setting makes the lighting subtly wrong rather than obviously
 broken, which is the kind of thing found weeks later.
 
+## Spawn immunity and round length
+
+Nobody can be frozen for a few seconds after arriving in a match or being sent
+back to a spawn point. Without it a catcher standing near a spawn takes whoever
+lands there before they have had a frame to move, which reads as the game being
+broken rather than the catcher being quick.
+
+Immunity is checked in two places on purpose. `FreezeRules` has it so the tag
+query respects it, and `Freezable.Freeze` refuses independently, because that
+method is public and the AI, `MatchState` and the tests all call it directly. A
+rule enforced at one of two doors is not enforced.
+
+It is granted **before** the spawn on both spawn paths, next to the role and for
+the same reason: in host mode Mirror deserialises the spawn payload back onto
+the same object, so a SyncVar written after spawning is overwritten by whatever
+the payload said.
+
+Immunity stops a freeze and nothing else. It deliberately does not stop a
+rescue — being freed is not something anyone needs protecting from, and a runner
+frozen with time left on their clock would otherwise be stuck until it ran out.
+Bots get it on the same terms as people; asymmetric rules there would feel worse
+than the brief pause at the start of a round.
+
+Round length is a menu choice, from one minute to ten. It travels menu →
+`MatchSetup` → `GameNetworkManager` → `MatchState`, and a map scene opened on
+its own falls back to its own default, which is what keeps the scenes usable
+alone.
+
 ## Deliberately not doing
 
 - **Client-side prediction or lag compensation.** This is a LAN/friends-scale

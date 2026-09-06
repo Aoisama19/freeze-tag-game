@@ -32,6 +32,7 @@ namespace BarafPaani.Core
             manager.HumanRole = _setup.HumanRole;
             manager.FillWithBots = _setup.FillWithBots;
             manager.TargetRunners = _setup.BotRunners;
+            manager.RoundSeconds = _setup.RoundSeconds;
             _setup.ClearRequest();
 
             switch (mode)

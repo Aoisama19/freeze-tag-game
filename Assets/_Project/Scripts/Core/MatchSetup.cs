@@ -29,6 +29,10 @@ namespace BarafPaani.Core
         private string _mapScene = "Game_3Talwaar";
 
         [SerializeField]
+        [Tooltip("Length of a round, in seconds.")]
+        private float _roundSeconds = 180f;
+
+        [SerializeField]
         [Tooltip("Off means no AI at all — the match is whoever turns up.")]
         private bool _fillWithBots = true;
 
@@ -44,6 +48,9 @@ namespace BarafPaani.Core
         /// <summary>Most bots a match will take. Keeps a typed-in number sane.</summary>
         public const int MaxBotRunners = 8;
 
+        /// <summary>Longest round the menu will offer, in seconds.</summary>
+        public const float MaxRoundSeconds = 600f;
+
         public GameMode Mode => _mode;
 
         public Role HumanRole => _humanRole;
@@ -51,6 +58,14 @@ namespace BarafPaani.Core
         public string JoinAddress => _joinAddress;
 
         public string MapScene => _mapScene;
+
+        public float RoundSeconds => _roundSeconds;
+
+        /// <summary>Records the round length. Kept in range whatever the menu offers.</summary>
+        public void ChooseRoundLength(float seconds)
+        {
+            _roundSeconds = Mathf.Clamp(seconds, 30f, MaxRoundSeconds);
+        }
 
         /// <summary>Records the map. Kept apart from Request so the menu can
         /// remember a choice without asking for a match yet.</summary>

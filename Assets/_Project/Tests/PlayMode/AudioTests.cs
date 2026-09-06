@@ -167,7 +167,13 @@ namespace BarafPaani.Tests
 
             Assert.IsFalse(source.isPlaying, "nothing should be playing yet");
 
-            me.GetComponent<Freezable>().Freeze();
+            Freezable freezable = me.GetComponent<Freezable>();
+
+            // Immunity cleared first: everyone is safe for a few seconds at the
+            // start of a round, so a freeze here would be refused for a reason
+            // that has nothing to do with what this test is about.
+            freezable.ClearImmunity();
+            freezable.Freeze();
             yield return null;
 
             Assert.IsTrue(source.isPlaying, "freezing should have been heard");

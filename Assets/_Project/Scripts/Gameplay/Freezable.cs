@@ -35,12 +35,43 @@ namespace BarafPaani.Gameplay
         [SyncVar(hook = nameof(OnIsFrozenChanged))]
         private bool _isFrozen;
 
+        [SyncVar]
+        [Tooltip("Network time this character stops being safe. Replicated so the HUD can count it down.")]
+        private double _immuneUntil;
+
         // Tracks what has actually been applied, so the state can be applied
         // twice without doing the work twice, and so the initial state is
         // applied exactly once on spawn.
         private bool? _applied;
 
         public bool IsFrozen => _isFrozen;
+
+        /// <summary>
+        /// Whether this character cannot currently be frozen. True for a short
+        /// while after arriving in a match or being returned to a spawn point.
+        /// </summary>
+        public bool IsImmune => NetworkTime.time < _immuneUntil;
+
+        /// <summary>Seconds of immunity left, for the HUD. Zero when there is none.</summary>
+        public float ImmunityRemaining =>
+            Mathf.Max(0f, (float)(_immuneUntil - NetworkTime.time));
+
+        /// <summary>
+        /// Makes this character safe for a moment. Granted on spawning and at
+        /// the start of every round, so nobody is taken before they can move.
+        /// </summary>
+        [Server]
+        public void GrantImmunity(float seconds)
+        {
+            _immuneUntil = NetworkTime.time + seconds;
+        }
+
+        /// <summary>Ends immunity now. Used when a round is wound back up.</summary>
+        [Server]
+        public void ClearImmunity()
+        {
+            _immuneUntil = 0d;
+        }
 
         private void Awake()
         {
@@ -72,7 +103,10 @@ namespace BarafPaani.Gameplay
         [Server]
         public bool Freeze()
         {
-            if (_isFrozen)
+            // Checked here as well as in FreezeRules, because this is public and
+            // the AI and the tests both call it directly. A rule enforced only
+            // at one of two doors is not enforced.
+            if (_isFrozen || IsImmune)
             {
                 return false;
             }

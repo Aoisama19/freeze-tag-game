@@ -104,6 +104,14 @@ namespace BarafPaani.EditorTools
             Place(mapLabel.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(60f, -250f),
                 new Vector2(360f, 30f));
 
+            Button roundButton = MakeButton(canvasObject, "RoundButton", font, "ROUND",
+                new Vector2(0.5f, 0.5f), new Vector2(-150f, -310f), new Vector2(220f, 44f),
+                Sprite("Modesbtns_Rectangle_55.png"));
+
+            Text roundLabel = MakeText(canvasObject, "RoundLabel", font, 20, TextAnchor.MiddleLeft);
+            Place(roundLabel.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(60f, -310f),
+                new Vector2(360f, 30f));
+
             Button quit = MakeButton(canvasObject, "QuitButton", font, "QUIT",
                 new Vector2(0.5f, 0f), new Vector2(0f, 70f), new Vector2(220f, 60f),
                 Sprite("Quitbtn_Rectangle_56.png"));
@@ -137,6 +145,8 @@ namespace BarafPaani.EditorTools
             state.FindProperty("_botsLabel").objectReferenceValue = botsLabel;
             state.FindProperty("_mapButton").objectReferenceValue = mapButton;
             state.FindProperty("_mapLabel").objectReferenceValue = mapLabel;
+            state.FindProperty("_roundButton").objectReferenceValue = roundButton;
+            state.FindProperty("_roundLabel").objectReferenceValue = roundLabel;
             state.FindProperty("_quitButton").objectReferenceValue = quit;
             state.ApplyModifiedPropertiesWithoutUndo();
 

@@ -946,12 +946,19 @@ namespace BarafPaani.EditorTools
             audioState.FindProperty("_source").objectReferenceValue = matchSource;
             audioState.ApplyModifiedPropertiesWithoutUndo();
 
+            Text immunity = MakeLabel(hud, "ImmunityLabel", font, 26, TextAnchor.UpperCenter);
+            Place(immunity.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -80f),
+                new Vector2(500f, 36f));
+            immunity.color = new Color(0.6f, 1f, 0.7f);
+            immunity.enabled = false;
+
             MatchHud matchHud = hud.AddComponent<MatchHud>();
 
             SerializedObject state = new SerializedObject(matchHud);
             state.FindProperty("_runnersLabel").objectReferenceValue = runners;
             state.FindProperty("_clockLabel").objectReferenceValue = clock;
             state.FindProperty("_resultLabel").objectReferenceValue = result;
+            state.FindProperty("_immunityLabel").objectReferenceValue = immunity;
             state.ApplyModifiedPropertiesWithoutUndo();
         }
 

@@ -108,6 +108,7 @@ namespace BarafPaani.Gameplay
                     _freezable.IsFrozen,
                     targetRole.Role,
                     target.IsFrozen,
+                    target.IsImmune,
                     squaredDistance,
                     squaredRange);
 

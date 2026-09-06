@@ -101,6 +101,10 @@ namespace BarafPaani.Tests
                     && role.Role == Role.Runner
                     && identity.TryGetComponent(out Freezable freezable))
                 {
+                    // Everyone is safe for a few seconds at the start of a round,
+                    // so a freeze here would otherwise be refused for a reason
+                    // that has nothing to do with what this test is about.
+                    freezable.ClearImmunity();
                     freezable.Freeze();
                 }
             }

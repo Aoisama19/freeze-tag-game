@@ -104,5 +104,71 @@ namespace BarafPaani.Tests
 
             Assert.AreEqual(TagOutcome.Freeze, outcome);
         }
+
+        [Test]
+        public void A_runner_who_just_spawned_cannot_be_frozen()
+        {
+            // A catcher standing on a spawn point would otherwise take whoever
+            // lands there before they have had a frame to move.
+            Assert.AreEqual(
+                TagOutcome.None,
+                FreezeRules.Resolve(
+                    Role.Catcher,
+                    actorIsFrozen: false,
+                    Role.Runner,
+                    targetIsFrozen: false,
+                    targetIsImmune: true,
+                    squaredDistance: 0f,
+                    squaredRange: 1f));
+        }
+
+        [Test]
+        public void The_same_runner_a_moment_later_can_be()
+        {
+            Assert.AreEqual(
+                TagOutcome.Freeze,
+                FreezeRules.Resolve(
+                    Role.Catcher,
+                    actorIsFrozen: false,
+                    Role.Runner,
+                    targetIsFrozen: false,
+                    targetIsImmune: false,
+                    squaredDistance: 0f,
+                    squaredRange: 1f));
+        }
+
+        [Test]
+        public void Immunity_does_not_stop_a_rescue()
+        {
+            // Being freed is not something anyone needs protecting from, and a
+            // runner frozen with time left on the clock would otherwise be
+            // stuck until it ran out.
+            Assert.AreEqual(
+                TagOutcome.Unfreeze,
+                FreezeRules.Resolve(
+                    Role.Runner,
+                    actorIsFrozen: false,
+                    Role.Runner,
+                    targetIsFrozen: true,
+                    targetIsImmune: true,
+                    squaredDistance: 0f,
+                    squaredRange: 1f));
+        }
+
+        [Test]
+        public void Immunity_does_not_put_a_catcher_in_reach()
+        {
+            // Catchers are never a target, immune or otherwise.
+            Assert.AreEqual(
+                TagOutcome.None,
+                FreezeRules.Resolve(
+                    Role.Runner,
+                    actorIsFrozen: false,
+                    Role.Catcher,
+                    targetIsFrozen: false,
+                    targetIsImmune: false,
+                    squaredDistance: 0f,
+                    squaredRange: 1f));
+        }
     }
 }

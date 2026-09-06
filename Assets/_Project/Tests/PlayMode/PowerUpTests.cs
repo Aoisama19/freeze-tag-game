@@ -194,7 +194,14 @@ namespace BarafPaani.Tests
             PowerUpHolder holder = runner.GetComponent<PowerUpHolder>();
 
             holder.Add(PowerUpKind.SpeedBoost);
-            runner.GetComponent<Freezable>().Freeze();
+
+            Freezable freezable = runner.GetComponent<Freezable>();
+
+            // Immunity cleared first: everyone is safe for a few seconds at the
+            // start of a round, so a freeze here would be refused for a reason
+            // that has nothing to do with what this test is about.
+            freezable.ClearImmunity();
+            freezable.Freeze();
 
             Assert.IsFalse(holder.Use(0), "being frozen should stop a power-up going off");
             Assert.AreEqual(1, holder.Count, "and it should still be carrying it");
