@@ -221,6 +221,19 @@ scanning the scenes folder, and the menu reads its list back out of the build
 settings, so a map cannot exist in one and be missing from the other — which
 would be a button that fails only in a player build.
 
+**The host decides the map.** A joiner's own selection is not a vote. Hosting
+sets Mirror's `networkSceneName`, which the server sends to each client as it
+authenticates, and the client loads that scene. Left unset — as it was — a
+joiner simply stayed in whatever map its own menu had chosen, so hosting
+Badshahi Masjid while the other player had 3 Talwaar selected put the two of
+them in different cities running the same match.
+
+The joiner still loads its own choice briefly before being moved. That is
+inherent to the NetworkManager living inside each game scene: a client has to
+load some game scene before it can connect at all. Removing the flash means
+moving the NetworkManager into the menu scene, which is a restructure rather
+than a fix.
+
 The fourth landmark, Faisal Mosque, is not here. It is a bare FBX with no
 prefab, no materials and no textures, and nothing in either old repository
 referenced it. Making it playable is art work, not engineering.

@@ -4,6 +4,7 @@ using BarafPaani.Gameplay;
 using Mirror;
 using Unity.AI.Navigation;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace BarafPaani.Core
 {
@@ -89,6 +90,20 @@ namespace BarafPaani.Core
         {
             ActiveMode = GameMode.Multiplayer;
             maxConnections = _multiplayerMaxConnections;
+
+            // Tell joiners which map this is.
+            //
+            // Mirror sends networkSceneName to each connection as it
+            // authenticates, and loads that scene on the client. Left unset, a
+            // joiner simply stays in whatever map it happened to pick in its own
+            // menu — so hosting Badshahi Masjid while the other player had
+            // 3 Talwaar selected put the two of them in different cities,
+            // running the same match.
+            //
+            // The map is the host's to decide. A joiner's own choice is not a
+            // vote.
+            networkSceneName = SceneManager.GetActiveScene().name;
+
             StartHost();
         }
 

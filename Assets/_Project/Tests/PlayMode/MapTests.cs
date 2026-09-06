@@ -182,6 +182,45 @@ namespace BarafPaani.Tests
                 }
             }
         }
+
+        [UnityTest]
+        public IEnumerator Hosting_tells_joiners_which_map_this_is()
+        {
+            // A joining client loads whatever map its own menu had selected.
+            // Mirror corrects that by sending networkSceneName as the client
+            // authenticates — but only if the host set it. Left empty, hosting
+            // Badshahi Masjid while the other player had 3 Talwaar chosen put
+            // the two of them in different cities running the same match.
+            foreach (string map in MapScenes())
+            {
+                LogAssert.ignoreFailingMessages = true;
+
+                SceneManager.LoadScene(map, LoadSceneMode.Single);
+                yield return null;
+                yield return null;
+
+                Object.FindFirstObjectByType<GameNetworkManager>().StartMultiplayerHost();
+                yield return new WaitForSeconds(0.5f);
+
+                Assert.AreEqual(
+                    map,
+                    NetworkManager.networkSceneName,
+                    $"a client joining {map} would not be told to load it");
+
+                if (NetworkClient.active || NetworkServer.active)
+                {
+                    NetworkManager.singleton?.StopHost();
+                }
+
+                if (NetworkManager.singleton != null)
+                {
+                    Object.DestroyImmediate(NetworkManager.singleton.gameObject);
+                }
+
+                yield return null;
+            }
+        }
+
     }
 }
 #endif
