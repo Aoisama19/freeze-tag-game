@@ -404,9 +404,9 @@ namespace BarafPaani.Tests
         {
             yield return StartMatch();
 
-            // The old build's clone found its bodies with a scene-wide tag
-            // lookup, so two users fought over the same objects. This is that
-            // defect, as a test.
+            // A clone that found its bodies with a scene-wide lookup would have
+            // both of these moving the same objects. This is that failure, as a
+            // test.
             GameObject[] runners = NetworkServer.spawned.Values
                 .Where(identity => identity != null && !Decoy.Is(identity))
                 .Select(identity => identity.gameObject)

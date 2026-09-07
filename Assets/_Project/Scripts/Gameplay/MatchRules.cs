@@ -3,12 +3,12 @@ namespace BarafPaani.Gameplay
     /// <summary>
     /// When a round is over and who won, as one pure function.
     ///
-    /// The count this reads — runners still free — is the number the old build
-    /// corrupted. Freezing an already frozen runner fired the event twice and
-    /// decremented it past where it should have stopped, so the match could be
-    /// decided by a bug rather than by play. FreezeRules already refuses the
-    /// double freeze and is tested for it; this is the other half, kept
-    /// separately testable so the win condition itself cannot drift.
+    /// The count this reads, runners still free, is the number a double freeze
+    /// would corrupt: freezing an already frozen runner twice would decrement it
+    /// past where it should stop, and the match would be decided by a bug rather
+    /// than by play. FreezeRules refuses the double freeze and is tested for it.
+    /// This is the other half, kept separately testable so the win condition
+    /// itself cannot drift.
     /// </summary>
     public static class MatchRules
     {

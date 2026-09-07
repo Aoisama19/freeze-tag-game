@@ -6,11 +6,10 @@ namespace BarafPaani.Gameplay.PowerUps
     /// <summary>
     /// What one character is carrying, and the only thing allowed to change it.
     ///
-    /// Server-authoritative. The old build added a component to the character
-    /// for every power-up picked up and destroyed it on use, which is why none
-    /// of it survived contact with the network: components added on one machine
-    /// exist nowhere else. Here the inventory is replicated state and using one
-    /// is a request the server grants or refuses.
+    /// Server-authoritative. The inventory is replicated state and using one is
+    /// a request the server grants or refuses. Adding a component per power-up
+    /// picked up would not survive contact with the network, because a component
+    /// added on one machine exists nowhere else.
     ///
     /// The list syncs to the owner only. What you are carrying is not something
     /// the other side gets to see.

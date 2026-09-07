@@ -12,9 +12,9 @@ namespace BarafPaani.AI
     /// accordingly, so a catcher hunts and guards while a runner rescues and
     /// flees, all out of the same component.
     ///
-    /// The old build had CatcherAI and RunnerAI as separate classes and they
-    /// drifted — RunnerAI was rewritten in one repository and left alone in the
-    /// other. One class means that cannot happen again.
+    /// One class rather than a CatcherAI and a RunnerAI. Two classes covering
+    /// the same ground drift the moment one of them is improved and the other
+    /// is not.
     ///
     /// What each side knows is deliberately different. Frozen characters are
     /// known globally, because isFrozen is replicated to every client anyway and
@@ -149,10 +149,10 @@ namespace BarafPaani.AI
         /// One decision, then return. There is no loop and no coroutine holding
         /// state between frames.
         ///
-        /// Issue 1 in the old build was CatcherAI.Delay(): StopCoroutine(Delay())
-        /// built a fresh iterator and so stopped nothing, control fell back into
-        /// a while (true) whose else branch had no yield, and the editor hung
-        /// inside a single frame. Nothing shaped like that can happen here.
+        /// The hazard being avoided: StopCoroutine(Delay()) builds a fresh
+        /// iterator and so stops nothing, control falls back into a while (true)
+        /// whose else branch has no yield, and the editor hangs inside a single
+        /// frame. Nothing shaped like that can happen without a coroutine.
         /// </summary>
         private void Tick(float now)
         {

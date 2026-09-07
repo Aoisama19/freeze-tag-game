@@ -6,10 +6,8 @@ namespace BarafPaani.UI
     /// Brings the menu in when it opens: each piece fades up into place, a
     /// moment after the one before it.
     ///
-    /// Driven from Update rather than a coroutine. Issue 1 in
-    /// docs/old-build-issues.md was a coroutine that could not be stopped
-    /// because StopCoroutine had been handed a fresh iterator; nothing here
-    /// holds state between frames that a disabled component would leak.
+    /// Driven from Update rather than a coroutine, so nothing holds state
+    /// between frames that a disabled component would leak.
     /// </summary>
     public class MenuIntro : MonoBehaviour
     {

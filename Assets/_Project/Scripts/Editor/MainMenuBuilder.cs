@@ -12,13 +12,11 @@ using UnityEngine.UI;
 namespace BarafPaani.EditorTools
 {
     /// <summary>
-    /// Builds the main menu scene, using the artwork from the original game.
+    /// Builds the main menu scene.
     ///
-    /// The old menu was far larger than this — character select, abilities, map
-    /// select, audio and controls panels. Most of that fronts systems this
-    /// rebuild does not have yet, so what is here covers what actually exists:
-    /// pick a side, then play alone, host, or join. The rest of the art is
-    /// waiting for the systems it belongs to.
+    /// What is here covers what the game actually has: pick a side, choose a
+    /// map and a round length, then play alone, host, or join. Menu artwork for
+    /// systems that do not exist would be a promise the game cannot keep.
     /// </summary>
     public static class MainMenuBuilder
     {
@@ -57,8 +55,8 @@ namespace BarafPaani.EditorTools
             backdrop.gameObject.AddComponent<BackgroundDrift>();
 
             // A dark wash over the photograph. Without it every label has to
-            // fight the background for contrast, which is what made the old
-            // layout read as washed out.
+            // fight the background for contrast and the whole screen reads as
+            // washed out.
             MakePanel(canvasObject, "Shade", Vector2.zero, new Vector2(2200f, 1400f),
                 null, new Color(0.03f, 0.05f, 0.09f, 0.68f));
 

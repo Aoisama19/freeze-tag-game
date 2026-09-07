@@ -5,10 +5,10 @@ using UnityEngine;
 namespace BarafPaani.Tests
 {
     /// <summary>
-    /// The view-cone maths. Issue 2 in docs/old-build-issues.md was the caller
-    /// misusing its result, but the old FieldOfView also hard-coded its radius
-    /// and angle in Start() after exposing them as inspector fields, so the
-    /// numbers on screen were a lie. Keeping the geometry honest and tested.
+    /// The view-cone maths, kept honest and tested. Two things go wrong here
+    /// easily: a caller misusing the result, and radius and angle being
+    /// hard-coded in Start after being exposed as inspector fields, which makes
+    /// the numbers on screen a lie.
     /// </summary>
     public class SightTests
     {

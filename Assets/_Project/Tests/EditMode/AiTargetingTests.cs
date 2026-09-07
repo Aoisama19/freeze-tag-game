@@ -6,8 +6,8 @@ namespace BarafPaani.Tests
 {
     /// <summary>
     /// Who an agent chases. One brain serves both roles, so these cover the
-    /// catcher and the runner side of the same function — the old build had two
-    /// AI classes that drifted apart instead (issue 6).
+    /// catcher side and the runner side of the same function. Two AI classes
+    /// would drift apart instead.
     /// </summary>
     public class AiTargetingTests
     {

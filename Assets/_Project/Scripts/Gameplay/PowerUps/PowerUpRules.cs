@@ -19,9 +19,9 @@ namespace BarafPaani.Gameplay.PowerUps
         /// <summary>
         /// Whether a character is in a position to use anything at all.
         ///
-        /// A frozen character is not: the old build left this to whichever
-        /// script happened to be disabled at the time, which meant a runner
-        /// frozen mid-reach could still fire off a power-up.
+        /// A frozen character is not. Left to whichever script happens to be
+        /// disabled at the time, a runner frozen mid-reach could still fire one
+        /// off.
         /// </summary>
         public static bool CanUse(bool frozen, int carried)
         {

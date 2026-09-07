@@ -6,15 +6,13 @@ namespace BarafPaani.Gameplay.PowerUps
     /// <summary>
     /// A standing copy of whoever made it, there to be chased instead of them.
     ///
-    /// Issue 3 in docs/old-build-issues.md is this power-up. The old Clone found
-    /// its bodies with GameObject.FindGameObjectsWithTag("Clone") — a scene-wide
-    /// lookup, so every character holding the power-up found and moved the same
-    /// objects and two users fought over them, and it indexed [0] with no length
-    /// check so it threw when nothing in the scene carried the tag.
+    /// A decoy is spawned by the character that used the power-up, exists only
+    /// for as long as it is meant to, and is destroyed by the server that made
+    /// it. There is no pool and nothing shared.
     ///
-    /// A decoy is now spawned by the character that used the power-up, exists
-    /// only for as long as it is meant to, and is destroyed by the server that
-    /// made it. There is no pool and nothing shared.
+    /// Finding bodies with a scene-wide tag lookup instead would have every
+    /// character holding the power-up moving the same objects, so two people
+    /// using it at once fight over them.
     ///
     /// It carries PlayerRole and Freezable on purpose: that is what makes it
     /// worth chasing, because the catcher's targeting sees a runner and the tag

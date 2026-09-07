@@ -1,145 +1,148 @@
 # Baraf-Paani
 
-A multiplayer freeze-tag game set in three Pakistani landmarks. One player
-catches, everyone else runs; a frozen runner stays frozen until a team-mate
-reaches them. Play alone against bots, or host a match and let friends on the
-same network find it in a list.
+A multiplayer freeze tag game set in three Pakistani landmarks. One player
+catches, everyone else runs. A frozen runner stays frozen until a team-mate
+reaches them.
 
-Built in Unity 6.3 LTS on Mirror. This is a rebuild of a BSc final-year project
-that previously existed as two separate, diverging codebases — one single-player,
-one multiplayer. Here there is one game that runs both ways.
+Play alone against bots, or host a match and let friends on the same network find
+it in a list. Built in Unity 6.3 LTS using Mirror for networking.
 
 ![The main menu](docs/screenshots/menu.png)
 
 ## The game
 
-A round runs for as long as you choose, one to ten minutes.
+A round runs for as long as you choose, from one minute to ten.
 
-- **The catcher** freezes runners by touching them. They know where every runner
-  is, always — on a 120-metre map a catcher who has to hunt by sight plays as
-  broken rather than fair.
-- **Runners** stay alive by not being touched, and free frozen team-mates by
-  reaching them. They see their team-mates at all times but only see the catcher
-  while the catcher is actually in view, so breaking line of sight is worth
-  doing.
-- **The catcher wins** by freezing everybody. **The runners win** by having
-  somebody still free when the clock runs out.
+The **catcher** freezes runners by touching them. They always know where every
+runner is. On a 120 metre map, a catcher who has to hunt by sight plays as broken
+rather than fair.
+
+**Runners** stay alive by not being touched, and free frozen team-mates by
+reaching them. They can see their team-mates at all times, but they only see the
+catcher while the catcher is in view. Breaking line of sight is worth doing.
+
+The catcher wins by freezing everybody. The runners win if anyone is still free
+when the clock runs out.
 
 Nobody can be frozen for the first few seconds of a round, so a catcher standing
-near a spawn point cannot take people before they have moved. The HUD says how
-long you are still safe for.
+near a spawn point cannot take people before they have had a chance to move. The
+HUD shows how long you are still safe for.
 
-The score carries across rounds within a match.
+Scores carry across rounds within a match.
 
 ### Power-ups
 
-Six pickups sit around the middle of each arena — closer in than the spawn ring,
-so going for one means going towards trouble. Carry up to three.
+Six pickups sit around the middle of each arena. They are closer in than the
+spawn ring, so going for one means heading towards trouble. You can carry three
+at a time.
 
-- **Speed** — considerably faster for a few seconds, for running away or running
-  somebody down.
-- **Invisible** — off everyone's screen, off the minimap, and out of the
-  catcher's otherwise unlimited view of the runners.
-- **Clone** — leaves a standing copy of you wearing your role, so the catcher has
-  to pick. Tagging it appears to work.
+* **Speed.** Considerably faster for a few seconds, whether you are running away
+  or running somebody down.
+* **Invisible.** Off everyone's screen, off the minimap, and out of the catcher's
+  otherwise unlimited view of the runners.
+* **Clone.** Leaves a standing copy of you wearing your role, so the catcher has
+  to guess. Tagging it appears to work.
 
-Bots use theirs too, but only when it counts: mid-chase, or mid-flight.
+Bots use theirs too, but only when it counts: mid chase, or mid flight.
 
 ## Controls
 
-| | |
+| Action | Keys |
 |---|---|
-| Move | `W` `A` `S` `D` or the arrow keys, left stick |
+| Move | `W` `A` `S` `D` or arrow keys, left stick |
 | Look | Mouse, right stick |
 | Sprint | `Left Shift`, left stick press |
 | Jump | `Space` |
 | Use the selected power-up | Left mouse, `Enter` |
 | Cycle power-ups | `1` and `2`, D-pad left and right |
-| Switch side (in the lobby) | `E` |
+| Switch side in the lobby | `E` |
 | Start the match (host, in the lobby) | Left mouse, `Enter` |
-| Menu — resume, settings, leave, quit | `Escape`, gamepad Start |
+| Menu: resume, settings, leave, quit | `Escape`, gamepad Start |
 
-Volume and look sensitivity are under Settings, reachable from the main menu and
-from the in-game menu. They are remembered between sessions.
+Volume and look sensitivity live under Settings, which you can reach from the
+main menu and from the in-game menu. Both are remembered between sessions.
 
 ## The maps
 
-Three, chosen from the menu, each showing a picture rendered from the map itself.
+There are three, chosen from the menu. Each one shows a picture rendered from the
+map itself.
 
-**3 Talwaar** — a Lahore roundabout and the streets around it.
+**3 Talwaar**, a Lahore roundabout and the streets around it.
 
 ![3 Talwaar](docs/screenshots/3talwaar.png)
 
-**Badshahi Masjid** — the mosque's courtyard, water channels and gate.
+**Badshahi Masjid**, the mosque's courtyard, water channels and gate.
 
 ![Badshahi Masjid](docs/screenshots/badshahimasjid.png)
 
-**Faisalabad Clock Tower** — the eight bazaars radiating from the tower.
+**Faisalabad Clock Tower**, with the eight bazaars radiating out from it.
 
 ![Faisalabad Clock Tower](docs/screenshots/clocktower.png)
 
-Each map is a 120-metre square cut out of a much larger model. The playable
-square, the spawn ring, the power-up ring and the minimap framing are all per-map
-numbers in one table in `PlayableSceneBuilder.cs`.
+Each map is a 120 metre square cut out of a much larger model. The playable
+square, the spawn ring, the power-up ring and the minimap framing are per-map
+numbers in a single table in `PlayableSceneBuilder.cs`.
 
 ## Playing together
 
-**Hosting.** Pick a side, a map and a round length, then *Host a match*. The
-match waits in a lobby until you start it. Anyone joining picks their own side
-with `E`; there can only be one catcher, and a bot will not hold that seat
+**Hosting.** Pick a side, a map and a round length, then choose *Host a match*.
+The match waits in a lobby until you start it. Anyone who joins picks their own
+side with `E`. There can only be one catcher, and a bot will never hold that seat
 against a person.
 
 **Joining.** *Join* opens a screen listing matches being hosted on your network.
-Click one and you go straight into whatever map the host chose. If the list is
-empty, type an address instead — that always works, and broadcast does not:
-it does not cross subnets, does not reach the internet, and is blocked outright
-on a good many university and office networks. A firewall prompt dismissed on the
-host's machine will also leave it invisible.
+Click one and you go straight into whatever map the host chose.
 
-**Bots** fill any empty runner slots and step aside as people arrive. They can be
-switched off entirely, in which case the humans present have to cover both sides
-— a match with nobody catching will refuse to start rather than run a round
-nobody can win.
+If the list stays empty, type an address instead. That always works and broadcast
+does not: it cannot cross subnets, cannot reach the internet, and is blocked
+outright on a good many university and office networks. A firewall prompt
+dismissed on the host's machine will also leave it invisible.
+
+**Bots** fill any empty runner slots and step aside as people arrive. You can
+switch them off, in which case the players present have to cover both sides. A
+match with nobody catching refuses to start rather than running a round that
+cannot be won.
 
 ## Running it from source
 
-Requires **Unity 6000.3.23f1** and **Git LFS** — the models and audio are stored
-through LFS, so a clone without it gets pointer files instead of assets.
+You will need **Unity 6000.3.23f1** and **Git LFS**. The models and audio are
+stored through LFS, so cloning without it gets you pointer files instead of
+assets.
 
 ```
 git lfs install
 git clone <this repository>
 ```
 
-Open the folder in Unity Hub, then open `Assets/_Project/Scenes/MainMenu.unity`
-and press Play.
+Open the folder in Unity Hub, open `Assets/_Project/Scenes/MainMenu.unity`, and
+press Play.
 
-Any map scene also runs on its own without the menu — open one and press Play and
-it starts a single-player match. That is deliberate, and it is what the tests
-rely on.
+Any map scene also runs on its own without the menu. Open one, press Play, and it
+starts a single player match. That is deliberate, and the tests rely on it.
 
 ### The scenes are generated
 
-The menus and the map scenes are built by editor scripts rather than assembled by
+The menus and map scenes are built by editor scripts rather than assembled by
 hand, so how they are put together is readable and reviewable instead of being
-inspector state nobody can diff. Under the **Baraf-Paani** menu in the editor:
+inspector state that nobody can diff. Under the **Baraf-Paani** menu in the
+editor:
 
-| | |
+| Command | What it does |
 |---|---|
-| Rebuild Playable Scene | the character prefabs and all three map scenes |
-| Rebuild Main Menu | the menu |
-| Rebuild Connecting Scene | the join screen |
-| Rebuild Character Animator | the locomotion blend tree, from the clips |
-| Rebuild Sounds | synthesises the sound effects |
-| Rebuild Map Previews | renders the map pictures the menu shows |
-| Probe Maps | reports each map's bounds, for setting arena numbers |
+| Rebuild Playable Scene | The character prefabs and all three map scenes |
+| Rebuild Main Menu | The menu |
+| Rebuild Connecting Scene | The join screen |
+| Rebuild Character Animator | The locomotion blend tree, from the clips |
+| Rebuild Sounds | Synthesises the sound effects |
+| Rebuild Map Previews | Renders the map pictures the menu shows |
+| Probe Maps | Reports each map's bounds, for setting arena numbers |
 
-Running one replaces its output from scratch. Editing those scenes by hand works,
-but the next rebuild will overwrite it.
+Running one of these replaces its output from scratch. You can edit those scenes
+by hand, but the next rebuild will overwrite your changes.
 
 ## Tests
 
-102 EditMode and 74 PlayMode tests.
+102 EditMode tests and 74 PlayMode tests.
 
 ```
 Unity.exe -runTests -batchmode -nographics -projectPath . -testPlatform EditMode
@@ -147,14 +150,16 @@ Unity.exe -runTests -batchmode -projectPath . -testPlatform PlayMode
 ```
 
 **PlayMode must run without `-nographics`.** The minimap renders to a texture,
-and without a graphics device that fails and takes most of the suite with it.
+and without a graphics device that fails and takes most of the suite down with
+it.
 
-The EditMode tests cover the rules as pure functions — who may freeze whom, what
-the lobby allows, how a round resolves. The PlayMode tests stand up real matches:
-every map is loaded, hosted and played to check it has a camera, a baked NavMesh,
-spawn points off the rooftops, and bots that are actually on the mesh.
+The EditMode tests cover the rules as pure functions: who may freeze whom, what
+the lobby allows, how a round resolves. The PlayMode tests stand up real matches.
+Every map gets loaded, hosted and played, to check that it has a camera, a baked
+NavMesh, spawn points that are not on rooftops, and bots that are actually on the
+mesh.
 
-Screenshots are taken by a play-mode tool that is skipped unless asked for:
+Screenshots come from a play mode tool that is skipped unless you ask for it:
 
 ```
 Unity.exe -runTests -batchmode -projectPath . -testPlatform PlayMode -captureScreenshots
@@ -166,40 +171,39 @@ Unity.exe -runTests -batchmode -projectPath . -testPlatform PlayMode -captureScr
 Unity.exe -quit -batchmode -nographics -projectPath . -buildWindows64Player Builds/BarafPaani.exe
 ```
 
-A Windows build is **not a single file**. `BarafPaani.exe` needs
-`BarafPaani_Data/`, `UnityPlayer.dll` and `MonoBleedingEdge/` beside it, so
-anything shared has to be a zip of the whole `Builds` folder — the bare .exe will
-not start.
+A Windows build is not a single file. `BarafPaani.exe` needs `BarafPaani_Data/`,
+`UnityPlayer.dll` and `MonoBleedingEdge/` sitting beside it, so anything you share
+has to be a zip of the whole `Builds` folder. The bare .exe will not start.
 
-Builds are not committed. They are tens of megabytes, change wholesale every
-time, and git keeps every version for ever; `Builds/` is in `.gitignore`. Attach
-the zip to a GitHub release instead, or put it somewhere like itch.io.
+Builds are not committed. They run to tens of megabytes, change wholesale every
+time, and git keeps every version for ever, so `Builds/` is in `.gitignore`.
+Attach the zip to a GitHub release instead, or host it somewhere like itch.io.
 
 Windows SmartScreen will warn about an unsigned executable downloaded from the
-internet. That is expected for an unsigned build and not a sign of anything
-wrong, but it is worth telling people before they see it.
+internet. That is expected for an unsigned build rather than a sign of anything
+wrong, but it is worth warning people before they run into it.
 
 ## How it is put together
 
 ```
 Assets/_Project/
   Scripts/
-    Core/        starting and joining matches, what the menu chose
-    Gameplay/    freezing, roles, rounds, power-ups — the rules
-    AI/          what a bot can see and what it decides to do
-    UI/          menus, HUD, minimap
-    Editor/      the builders that generate the scenes
-  Tests/         EditMode (pure rules) and PlayMode (real matches)
+    Core/        Starting and joining matches, and what the menu chose
+    Gameplay/    Freezing, roles, rounds, power-ups. The rules.
+    AI/          What a bot can see, and what it decides to do
+    UI/          Menus, HUD, minimap
+    Editor/      The builders that generate the scenes
+  Tests/         EditMode for pure rules, PlayMode for real matches
   Art/ Audio/ Prefabs/ Scenes/ Settings/
 Assets/ThirdParty/Mirror
 ```
 
-Two documents are worth reading before changing anything:
+[docs/architecture.md](docs/architecture.md) covers the design decisions and
+what each one forced, including several traps this codebase sets repeatedly.
 
-- **[docs/architecture.md](docs/architecture.md)** — the decisions and what they
-  forced, including several traps this codebase sets repeatedly.
-- **[docs/old-build-issues.md](docs/old-build-issues.md)** — the defects found in
-  the original build, all of which are closed, and why each one happened.
+Third-party assets and their licences are in
+[THIRD-PARTY.md](THIRD-PARTY.md).
 
-Third-party assets and their licences are listed in
-**[THIRD-PARTY.md](THIRD-PARTY.md)**.
+## Licence
+
+Copyright (c) 2026 Faizan Iqbal. All rights reserved. See [LICENSE](LICENSE).

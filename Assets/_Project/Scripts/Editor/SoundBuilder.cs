@@ -10,10 +10,8 @@ namespace BarafPaani.EditorTools
     ///
     /// Built rather than sourced, for the same reason the scene and the animator
     /// are built: what gets committed is a readable description of the thing.
-    /// It also settles the licensing question outright. The old project's entire
-    /// audio folder was a single hour-long rip of a commercial recording by a
-    /// named musician, which is not a sound library and is not ours to ship.
-    /// These are a few hundred lines of arithmetic and belong to nobody.
+    /// It also settles the licensing question outright. These are a few hundred
+    /// lines of arithmetic and belong to nobody.
     ///
     /// The footsteps are the exception: those are Unity's own Starter Assets
     /// recordings, under the Unity Companion License, kept in Audio/Footsteps

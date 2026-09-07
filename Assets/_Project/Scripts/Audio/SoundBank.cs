@@ -5,11 +5,10 @@ namespace BarafPaani.Audio
     /// <summary>
     /// Every sound the game makes, in one asset.
     ///
-    /// An asset rather than a singleton. The old build's AudioManager was a
-    /// static instance with DontDestroyOnLoad that looked clips up by string at
-    /// the call site, so a typo was silence and nothing could be checked until
-    /// it was played. docs/architecture.md rules out static mutable game state
-    /// for the same reasons.
+    /// An asset rather than a singleton. A static manager that looks clips up
+    /// by string at the call site turns a typo into silence, and nothing can be
+    /// checked until it is played. docs/architecture.md rules out static mutable
+    /// game state for the same reasons.
     /// </summary>
     [CreateAssetMenu(menuName = "Baraf-Paani/Sound Bank", fileName = "SoundBank")]
     public class SoundBank : ScriptableObject

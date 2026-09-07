@@ -8,12 +8,11 @@ namespace BarafPaani.AI
     /// <summary>
     /// Finds the nearest character this agent can actually see.
     ///
-    /// The old FieldOfView assigned its result inside the loop over candidates,
-    /// so with more than one in range the answer was whichever collider happened
-    /// to be processed last rather than whether anything was visible at all —
-    /// and OverlapSphere does not promise an order, so sight flickered. See
-    /// docs/old-build-issues.md, issue 2. Here the result is a local that only
-    /// ever moves closer, and it is returned once at the end.
+    /// The result is a local that only ever moves closer, returned once at the
+    /// end. Assigning it inside the loop instead would make the answer whichever
+    /// collider happened to be processed last rather than whether anything was
+    /// visible at all, and OverlapSphere promises no order, so sight would
+    /// flicker.
     /// </summary>
     public class Vision : MonoBehaviour
     {

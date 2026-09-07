@@ -7,12 +7,11 @@ namespace BarafPaani.Gameplay
     /// Freeze state for one character, and the only place its consequences are
     /// applied.
     ///
-    /// The old build stored this as gameObject.layer and then disabled the
-    /// animator, agent, controller and input separately at each call site. That
-    /// could not replicate — which is the root reason multiplayer needed its own
-    /// parallel implementation — and the four disable lists had drifted apart,
-    /// so a character frozen by the AI ended up in a different state than one
-    /// frozen by a player. See docs/old-build-issues.md, issue 5.
+    /// Stored as a SyncVar rather than as a physics layer, and applied in one
+    /// place rather than by disabling the animator, agent, controller and input
+    /// separately at each call site. A layer cannot replicate, and separate
+    /// disable lists drift until a character frozen by the AI ends up in a
+    /// different state from one frozen by a player.
     /// </summary>
     public class Freezable : NetworkBehaviour
     {

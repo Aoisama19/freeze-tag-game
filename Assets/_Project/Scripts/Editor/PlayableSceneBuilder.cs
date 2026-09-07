@@ -673,9 +673,8 @@ namespace BarafPaani.EditorTools
                 pickup.GetComponent<BoxCollider>().isTrigger = true;
 
                 // A scene identity, so Mirror owns it from the start of the
-                // match. The old build's pickups were plain objects that each
-                // client handled for itself, which is how two people could take
-                // the same one.
+                // match. A plain object that each client handled for itself
+                // would let two people take the same pickup.
                 pickup.AddComponent<NetworkIdentity>();
 
                 PowerUpPickup component = pickup.AddComponent<PowerUpPickup>();
@@ -1168,9 +1167,9 @@ namespace BarafPaani.EditorTools
         /// makes it move and change colour.
         ///
         /// Shared by both prefabs on purpose: a player and an AI have to be the
-        /// same character. When the visuals lived on each prefab separately in
-        /// the old build they drifted, and an AI ended up a different height
-        /// than a human — which changes who can see whom over a wall.
+        /// same character. Built separately on each prefab they drift, and an AI
+        /// a different height from a human changes who can see whom over a
+        /// wall.
         /// </summary>
         /// <summary>
         /// Loads the sound bank, creating it and filling it in from the audio

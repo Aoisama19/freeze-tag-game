@@ -6,17 +6,15 @@ namespace BarafPaani.Gameplay.PowerUps
     /// <summary>
     /// One power-up sitting in the world, waiting to be walked into.
     ///
-    /// The server decides who gets it. The old build handled the whole thing in
-    /// a client-side OnTriggerEnter and hid the pickup with a coroutine on
-    /// whichever machine happened to run it, so two players could each take the
-    /// same one and neither would see the other do it.
+    /// The server decides who gets it. Handled client-side instead, two players
+    /// could each take the same pickup and neither would see the other do it.
     ///
     /// Contact is a proximity query on a tick rather than a trigger callback,
     /// the same way TagOnContact does it, and for the same reason: nothing in
     /// this game carries a Rigidbody, so OnTriggerEnter never fires between a
     /// static trigger and a character pushed around by a NavMeshAgent. Written
-    /// as a trigger it worked for the human — a CharacterController raises them
-    /// — and silently never fired for a single bot.
+    /// as a trigger it works for the human, whose CharacterController raises
+    /// them, and silently never fires for a single bot.
     /// </summary>
     public class PowerUpPickup : NetworkBehaviour
     {

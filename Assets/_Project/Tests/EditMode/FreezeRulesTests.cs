@@ -4,10 +4,9 @@ using NUnit.Framework;
 namespace BarafPaani.Tests
 {
     /// <summary>
-    /// These are the freeze half of the acceptance checklist in
-    /// docs/old-build-issues.md. Issues 4 and 6 were both cases of the rules
-    /// existing in more than one place and disagreeing; these lock the one
-    /// remaining copy down.
+    /// Every rule about who may freeze or free whom lives in one pure function,
+    /// and these lock it down. Rules that exist in more than one place disagree
+    /// eventually.
     /// </summary>
     public class FreezeRulesTests
     {

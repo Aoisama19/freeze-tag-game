@@ -8,13 +8,12 @@ namespace BarafPaani.Gameplay.PowerUps
     /// The one place a power-up has consequences, for the same reason Freezable
     /// is the one place freezing does.
     ///
-    /// In the old build each power-up was a component that reached out and
-    /// changed whatever it fancied — a controller's sprint speed, a layer, a
-    /// tag, a minimap component, a static event — and undid it in its own
-    /// Deactivate. Nothing agreed on what "active" meant, so an effect
-    /// interrupted halfway left the character permanently altered. Here the
-    /// state is replicated, and applying it is a single method that can be run
-    /// twice without doing the work twice.
+    /// If each power-up reached out and changed whatever it liked, a sprint
+    /// speed here and a layer or a tag there, then undid that itself, nothing
+    /// would agree on what active meant and an effect interrupted halfway would
+    /// leave the character permanently altered. Here the state is replicated,
+    /// and applying it is a single method that can be run twice without doing
+    /// the work twice.
     /// </summary>
     public class PowerUpEffects : NetworkBehaviour
     {

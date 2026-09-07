@@ -11,9 +11,8 @@ namespace BarafPaani.AI
     /// Reads Mirror's own NetworkServer.spawned rather than keeping a registry
     /// of ours. That collection is already the authoritative list of what is in
     /// the game, so there is nothing to register, nothing to forget to
-    /// unregister, and no static mutable state of our own to go stale — which
-    /// docs/architecture.md rules out and which the old GameManager singleton
-    /// got wrong.
+    /// unregister, and no static mutable state of our own to go stale, which
+    /// docs/architecture.md rules out.
     ///
     /// Server-only. Clients have no business running these.
     /// </summary>

@@ -5,10 +5,10 @@ namespace BarafPaani.Tests
 {
     /// <summary>
     /// The win condition. Worth pinning hard, because the count it reads is the
-    /// one the old build corrupted — a double freeze decremented runners-left
-    /// past where it should have stopped, so a match could be decided by a bug.
-    /// FreezeRules refuses the double freeze; this checks what is done with the
-    /// number afterwards.
+    /// one a double freeze would corrupt: decrementing runners-left past where
+    /// it should stop lets a match be decided by a bug rather than by play.
+    /// FreezeRules refuses the double freeze, and this checks what is done with
+    /// the number afterwards.
     /// </summary>
     public class MatchRulesTests
     {

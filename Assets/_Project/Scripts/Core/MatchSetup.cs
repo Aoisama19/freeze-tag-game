@@ -7,10 +7,9 @@ namespace BarafPaani.Core
     /// What the player chose in the menu, carried into the game scene.
     ///
     /// An asset rather than a static field. docs/architecture.md rules out
-    /// static mutable game state — the old build's GameManager singleton and
-    /// Actions class both assumed one game in one process — and this way the
-    /// choice is inspectable, and the game scene still runs on its own defaults
-    /// when opened directly, which is what the tests rely on.
+    /// static mutable game state, which assumes one game in one process. This
+    /// way the choice is inspectable, and the game scene still runs on its own
+    /// defaults when opened directly, which is what the tests rely on.
     /// </summary>
     [CreateAssetMenu(menuName = "Baraf-Paani/Match Setup", fileName = "MatchSetup")]
     public class MatchSetup : ScriptableObject

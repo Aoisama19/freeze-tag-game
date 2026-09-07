@@ -10,10 +10,9 @@ namespace BarafPaani.EditorTools
     /// <summary>
     /// Renders a picture of each map for the menu to show.
     ///
-    /// Taken from our own scenes rather than sourced. The old project's map
-    /// thumbnails were downloaded stock photographs — one of them still carries
-    /// a stock agency's watermark across it — which is neither ours to ship nor
-    /// a picture of anything in this game. A render of the actual arena is both.
+    /// Taken from the game's own scenes rather than sourced. A stock photograph
+    /// of a landmark is neither ours to ship nor a picture of anything in this
+    /// game. A render of the actual arena is both.
     ///
     /// Must run with a graphics device, so no -nographics on the command line.
     /// A camera with nothing to render to produces a black png and no error.

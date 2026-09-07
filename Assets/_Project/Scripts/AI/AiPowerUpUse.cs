@@ -12,9 +12,8 @@ namespace BarafPaani.AI
     /// reads the intent the brain has settled on and answers a narrower
     /// question, so neither has to know how the other works.
     ///
-    /// The old build never got here: its power-ups drove a ThirdPersonController
-    /// or a NavMeshAgent through hard-coded child indices, and no bot ever used
-    /// one.
+    /// Bots reach power-ups through the same holder a person does, so there is
+    /// no second path to keep working.
     /// </summary>
     [RequireComponent(typeof(AiBrain))]
     [RequireComponent(typeof(PowerUpHolder))]

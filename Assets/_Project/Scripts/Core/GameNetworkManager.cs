@@ -13,9 +13,9 @@ namespace BarafPaani.Core
     ///
     /// Single-player is a Mirror host that nobody can join; multiplayer is the
     /// same host with the door open. That is the whole difference. Nothing
-    /// downstream of this class should ask which mode it is running in — see
-    /// docs/architecture.md for why the old build's split into two codebases
-    /// is the thing we are avoiding.
+    /// downstream of this class should ask which mode it is running in. See
+    /// docs/architecture.md for why one implementation rather than two is the
+    /// decision everything else rests on.
     /// </summary>
     public class GameNetworkManager : NetworkManager
     {

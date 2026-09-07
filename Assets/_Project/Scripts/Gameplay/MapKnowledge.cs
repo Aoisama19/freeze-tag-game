@@ -5,9 +5,8 @@ namespace BarafPaani.Gameplay
     /// minimap, so what a bot acts on and what a player is shown can never drift
     /// apart.
     ///
-    /// That drift is not hypothetical. Issues 4 and 6 in the old build were both
-    /// the same logic living in two places and disagreeing, and a minimap that
-    /// worked out visibility for itself would be the same mistake in a new coat.
+    /// A minimap that worked visibility out for itself would be the same logic
+    /// living in two places, free to disagree with what the bots act on.
     ///
     /// The model:
     ///
