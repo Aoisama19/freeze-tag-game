@@ -34,8 +34,15 @@ namespace BarafPaani.EditorTools
         {
             GameSettings settings = EnsureSettings();
 
-            SettingsApplier applier = canvas.GetComponent<SettingsApplier>()
-                ?? canvas.AddComponent<SettingsApplier>();
+            // Explicit comparison rather than ??, which does not use
+            // UnityEngine.Object's overloaded equality and so cannot tell a
+            // missing component from a present one.
+            SettingsApplier applier = canvas.GetComponent<SettingsApplier>();
+
+            if (applier == null)
+            {
+                applier = canvas.AddComponent<SettingsApplier>();
+            }
 
             SerializedObject applierState = new SerializedObject(applier);
             applierState.FindProperty("_settings").objectReferenceValue = settings;

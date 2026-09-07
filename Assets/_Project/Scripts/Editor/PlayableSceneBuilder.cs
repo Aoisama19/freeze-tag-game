@@ -960,9 +960,12 @@ namespace BarafPaani.EditorTools
             // The applier comes with the settings overlay now, which BuildInGameMenu
             // puts on this same canvas.
 
-            Text score = MakeLabel(hud, "ScoreLabel", font, 20, TextAnchor.UpperRight);
-            Place(score.rectTransform, new Vector2(1f, 1f), new Vector2(-24f, -24f),
-                new Vector2(560f, 30f));
+            // Top left, under the runner count — not top right, which is the
+            // minimap's corner. Anchored there it ran underneath the map and
+            // came out looking like broken text rather than covered text.
+            Text score = MakeLabel(hud, "ScoreLabel", font, 20, TextAnchor.UpperLeft);
+            Place(score.rectTransform, new Vector2(0f, 1f), new Vector2(24f, -58f),
+                new Vector2(560f, 28f));
 
             MatchHud matchHud = hud.AddComponent<MatchHud>();
 
@@ -1467,7 +1470,16 @@ namespace BarafPaani.EditorTools
         /// </summary>
         private static void BuildCamera()
         {
-            Camera main = Camera.main ?? CreateMainCamera();
+            // Explicit comparison rather than ??, for the same reason as
+            // everywhere else: ?? does not use UnityEngine.Object's overloaded
+            // equality, so a missing camera would come back as something that
+            // is not null but throws the moment it is used.
+            Camera main = Camera.main;
+
+            if (main == null)
+            {
+                main = CreateMainCamera();
+            }
 
             if (main.GetComponent<CinemachineBrain>() == null)
             {

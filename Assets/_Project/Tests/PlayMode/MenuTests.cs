@@ -50,6 +50,20 @@ namespace BarafPaani.Tests
             yield return null;
         }
 
+        /// <summary>
+        /// Loads the menu and waits for it to stop moving.
+        ///
+        /// The intro slides each piece up into place over about a second, so
+        /// anything measuring where a control *is* has to wait for it to be
+        /// where it belongs. Measured on the second frame instead, the join
+        /// button is still thirty pixels low and sitting on the address field.
+        /// </summary>
+        private static IEnumerator LoadSettledMenu()
+        {
+            yield return LoadMenu();
+            yield return new WaitForSeconds(2f);
+        }
+
         private static T Field<T>(MenuController menu, string name) where T : Object
         {
             FieldInfo field = typeof(MenuController)
@@ -174,7 +188,7 @@ namespace BarafPaani.Tests
             // before now. Overlapping controls do not throw or log anything —
             // one of them simply stops being clickable, and only in the corner
             // where they cross.
-            yield return LoadMenu();
+            yield return LoadSettledMenu();
 
             List<(string name, Rect rect)> controls = new List<(string, Rect)>();
 
@@ -211,7 +225,7 @@ namespace BarafPaani.Tests
         {
             // A control placed off the edge is as good as missing, and nothing
             // reports it.
-            yield return LoadMenu();
+            yield return LoadSettledMenu();
 
             Rect screen = new Rect(0f, 0f, Screen.width, Screen.height);
 

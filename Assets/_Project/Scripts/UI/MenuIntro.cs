@@ -56,9 +56,21 @@ namespace BarafPaani.UI
 
                 // Added rather than required, so the builder does not have to
                 // put one on every element it lays out.
-                _groups[i] = _pieces[i].GetComponent<CanvasGroup>()
-                    ?? _pieces[i].gameObject.AddComponent<CanvasGroup>();
+                //
+                // Written as an explicit comparison, not ??. UnityEngine.Object
+                // overloads == to report a missing or destroyed object as null,
+                // and the null-coalescing operator does not use that overload —
+                // so ?? hands back the missing component instead of making one,
+                // and the next line throws. That is what happened here: the
+                // whole intro silently did nothing from the moment it was added.
+                CanvasGroup group = _pieces[i].GetComponent<CanvasGroup>();
 
+                if (group == null)
+                {
+                    group = _pieces[i].gameObject.AddComponent<CanvasGroup>();
+                }
+
+                _groups[i] = group;
                 _groups[i].alpha = 0f;
             }
         }

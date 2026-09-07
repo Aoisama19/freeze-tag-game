@@ -60,7 +60,7 @@ namespace BarafPaani.EditorTools
             // fight the background for contrast, which is what made the old
             // layout read as washed out.
             MakePanel(canvasObject, "Shade", Vector2.zero, new Vector2(2200f, 1400f),
-                null, new Color(0.03f, 0.05f, 0.09f, 0.55f));
+                null, new Color(0.03f, 0.05f, 0.09f, 0.68f));
 
             Text title = MakeText(canvasObject, "Title", font, 86, TextAnchor.MiddleCenter);
             Place(title.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 396f),
@@ -74,20 +74,29 @@ namespace BarafPaani.EditorTools
             // and two objects answering to it in one scene is a trap for
             // whoever next goes looking for one of them.
             MakePanel(canvasObject, "MatchSettingsPanel", new Vector2(-472f, 34f),
-                new Vector2(500f, 500f), panelPlate, new Color(1f, 1f, 1f, 0.16f));
+                new Vector2(500f, 500f), panelPlate, new Color(1f, 1f, 1f, 0.32f));
 
             Text sideHeading = MakeText(canvasObject, "SideHeading", font, 24, TextAnchor.MiddleCenter);
             Place(sideHeading.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(-472f, 236f),
                 new Vector2(460f, 32f));
             sideHeading.text = "YOUR SIDE";
 
+            // A plate behind the words, not the character icons. Those are
+            // drawings of people, and stretched to button size behind a label
+            // they read as a graphical fault rather than as a button.
+            //
+            // The grey plate rather than the pale one: these two are tinted to
+            // show which side is chosen, and on a near-white plate the tint has
+            // nothing to darken, so both buttons look selected at once.
+            Sprite sidePlate = Sprite("Modesbtns_Rectangle_55.png");
+
             Button catcher = MakeButton(canvasObject, "CatcherButton", font, "CATCHER",
                 new Vector2(0.5f, 0.5f), new Vector2(-590f, 168f), new Vector2(220f, 68f),
-                Sprite("PlayerType_people.png"));
+                sidePlate);
 
             Button runner = MakeButton(canvasObject, "RunnerButton", font, "RUNNER",
                 new Vector2(0.5f, 0.5f), new Vector2(-354f, 168f), new Vector2(220f, 68f),
-                Sprite("PlayerType_Runner.png"));
+                sidePlate);
 
             Text roleLabel = MakeText(canvasObject, "RoleLabel", font, 22, TextAnchor.MiddleCenter);
             Place(roleLabel.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(-472f, 104f),
@@ -114,7 +123,7 @@ namespace BarafPaani.EditorTools
 
             // --------------------------------------------------------- right
             MakePanel(canvasObject, "MapPanel", new Vector2(468f, 60f),
-                new Vector2(540f, 448f), panelPlate, new Color(1f, 1f, 1f, 0.16f));
+                new Vector2(540f, 448f), panelPlate, new Color(1f, 1f, 1f, 0.32f));
 
             Text mapHeading = MakeText(canvasObject, "MapHeading", font, 24, TextAnchor.MiddleCenter);
             Place(mapHeading.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(468f, 244f),

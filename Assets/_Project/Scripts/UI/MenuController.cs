@@ -95,7 +95,8 @@ namespace BarafPaani.UI
         private Color _chosen = new Color(1f, 0.85f, 0.3f);
 
         [SerializeField]
-        private Color _unchosen = new Color(1f, 1f, 1f, 0.55f);
+        [Tooltip("Clearly darker than the chosen one, or both sides look picked.")]
+        private Color _unchosen = new Color(0.45f, 0.48f, 0.55f, 0.9f);
 
         private Role _role = Role.Catcher;
 
@@ -243,7 +244,8 @@ namespace BarafPaani.UI
 
             if (_roundLabel != null)
             {
-                _roundLabel.text = $"Round    {Minutes(seconds)}";
+                // The button beside this already says ROUND.
+                _roundLabel.text = Minutes(seconds);
             }
         }
 
